@@ -40,13 +40,16 @@
 - GitHub Pages settings confirmed private-source Pages were unavailable on this account plan; user then requested public source. Repository was made public, source pushed through signed-in GitHub Desktop, and Pages source set to GitHub Actions. First run exposed Chromium's sandbox restriction; later runs exposed intermittent Open-Meteo connection timeouts. Added a CI-only Chromium `--no-sandbox` flag and three bounded forecast fetch attempts. Workflow run `44122620626` succeeded; run `44123155308` timed out and left the previous deployment in place; run `44123729494` then succeeded and deployed a 16:16 forecast. Browser caching initially showed the older image, so `kindle.html` gained a per-load cache-busting query. Workflow run `44124346995` succeeded on retry and deployed the change; browser verification showed the refreshed image timestamp 16:22. Docs-only pushes are excluded from refresh runs.
 
 ## Compatibility and next action
-- Firmware 4.1.3 is within the published K4NT 4.0.0–4.1.4 method range. No jailbreak package or firmware change has been applied. Public site and automatic workflow are deployed; Open-Meteo access from GitHub runners has been intermittent but retry succeeded. The live URL and cache-busting image refresh are verified in desktop Chrome; actual HTTPS compatibility and refresh behavior on the physical Kindle remain untested. Next: user opens `https://joltstudio.github.io/witney-kindle-weather/kindle.html` in Experimental → Web Browser on the Kindle, bookmarks it, leaves it open, and reports whether the page/image loads. If HTTPS is rejected, use the documented ZIP/JPG USB fallback.
+- Device test: user opened the public page on the stock D01100 at firmware 4.1.3 and received “unable to establish a secure connection with this site.” GitHub Pages serves `github.io` over HTTPS automatically, so the stock browser cannot reach this host if its TLS stack rejects the modern connection. The page itself is working in desktop Chrome. Amazon provides official 4.1.3 → 4.1.4 update instructions, but no source found establishes that 4.1.4 fixes modern TLS; a report describes the same browser error on 4.1.4. No firmware or jailbreak changes have been applied.
+- Next: advise the user that stock Kindle browser hosting on this URL is blocked. Options are (a) try Amazon's official 4.1.4 update then retest, with no guarantee of fixing TLS; (b) use USB snapshots; or (c) investigate an HTTP-only host/proxy, which sends traffic unencrypted and requires explicit user acceptance. Do not enable HTTP-only hosting or modify firmware without the user's choice.
 
 ## Source URLs
 - Open-Meteo docs: https://open-meteo.com/en/docs
 - Open-Meteo terms: https://open-meteo.com/en/terms
 - Open-Meteo licence: https://open-meteo.com/en/license
 - Amazon prior software updates: https://digprjsurvey.amazon.com/csad/help/node/GX3VVAQS4DYDE5KE?theme=light
+- GitHub Pages HTTPS behavior: https://docs.github.com/en/pages/getting-started-with-github-pages/securing-your-github-pages-site-with-https
+- Kindle 4.1.4 browser report: https://www.amazonforum.com/s/question/0D56Q0000CTWCwQSQX/kindle-414-kindle-is-not-available-on-this-browser?language=en_US
 - MobileRead K4 Non-Touch compatibility page: https://wiki.mobileread.com/wiki/Kindle4NTHacking
 - MobileRead K4NT-specific Picture Viewer steps: https://www.mobileread.com/forums/showthread.php?nojs=1&t=152104
 - Kindle 4 User Guide (USB transfer): https://kindle.s3.amazonaws.com/Kindle_User%27s_Guide_4th_Edition.pdf
