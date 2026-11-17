@@ -12,6 +12,7 @@ EIPS=/usr/sbin/eips
 # firmware's known absolute path so the daemon works under cron's minimal shell.
 LIPC=/usr/bin/lipc-set-prop
 XH="$ROOT/xh"
+CA_BUNDLE="$ROOT/cacert.pem"
 INTERVAL=1800
 WIFI_WAIT=8
 DOWNLOAD_TIMEOUT=25
@@ -35,11 +36,15 @@ if [ ! -x "$XH" ]; then
   log 'Missing HTTPS client xh; exiting'
   exit 1
 fi
+if [ ! -r "$CA_BUNDLE" ] || [ ! -s "$CA_BUNDLE" ]; then
+  log "Missing readable CA bundle at $CA_BUNDLE; exiting"
+  exit 1
+fi
 
 timed_xh() {
   output=$1
   url=$2
-  "$XH" -d -q -o "$output" get "$url" &
+  "$XH" --verify "$CA_BUNDLE" -d -q -o "$output" get "$url" &
   xh_pid=$!
   seconds=0
   while [ "$seconds" -lt "$DOWNLOAD_TIMEOUT" ]; do

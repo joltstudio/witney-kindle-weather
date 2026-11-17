@@ -9,6 +9,7 @@ KINDLE_DASH_ARCHIVE=${KINDLE_DASH_ARCHIVE:-}
 RELEASE_URL='https://github.com/pascalw/kindle-dash/releases/download/v1.0.0-beta.4/kindle-dash-v1.0.0-beta.4.tgz'
 RELEASE_SHA256='3bdf2626dd94bc9636e54ae159f193379aea257a4c39f4b3a91d5f395fa76889'
 XH_SHA256='d77c9b66a5bcd2ef0375d922b7f709f8ce4697a9d57c4b2452d6cb7ce6eaef70'
+CA_BUNDLE_SHA256='427c064216761a1e72a8b30f0d954d08cb6e4435a82091fb865afd20c8497285'
 JAILBREAK_ARCHIVE=${JAILBREAK_ARCHIVE:-/private/tmp/kindle-k4-jailbreak-1.8.N.zip}
 JAILBREAK_SHA256='e83da520a25b0186433f50d93e80af7245fbdf2bc2fb3593e25c2c01ddec9c52'
 
@@ -43,7 +44,10 @@ test -f "$WORK/jailbreak/diagnostic_logs/device_info.xml"
 
 DEST="$KINDLE_VOLUME/kindle-weather"
 mkdir -p "$DEST"
+test -s "$SCRIPT_DIR/cacert.pem"
+printf '%s  %s\n' "$CA_BUNDLE_SHA256" "$SCRIPT_DIR/cacert.pem" | shasum -a 256 -c -
 cp "$WORK/xh" "$DEST/xh"
+cp "$SCRIPT_DIR/cacert.pem" "$DEST/cacert.pem"
 cp "$SCRIPT_DIR/kindle-weather-daemon.sh" "$DEST/"
 cp "$SCRIPT_DIR/kindle-weather-watchdog.sh" "$DEST/"
 cp "$SCRIPT_DIR/kindle-weather-config.example" "$DEST/config.example"
@@ -54,5 +58,5 @@ cp "$WORK/jailbreak/ENABLE_DIAGS" "$KINDLE_VOLUME/ENABLE_DIAGS"
 mkdir -p "$KINDLE_VOLUME/diagnostic_logs"
 cp "$WORK/jailbreak/diagnostic_logs/device_info.xml" "$KINDLE_VOLUME/diagnostic_logs/device_info.xml"
 
-echo "Staged the verified static ARM xh client, weather scripts, and matching K4 jailbreak trigger files on $KINDLE_VOLUME."
+echo "Staged the verified static ARM xh client, Mozilla CA bundle, weather scripts, and matching K4 jailbreak trigger files on $KINDLE_VOLUME."
 echo "The installer runs from the jailbreak Diagnostics hook. Review $DEST/config, then safely eject the Kindle."

@@ -7,6 +7,7 @@ ROOT=/mnt/us/kindle-weather
 CRONTAB_ROOT=/etc/crontab/root
 MARKER='kindle-weather-watchdog.sh'
 XH="$ROOT/xh"
+CA_BUNDLE="$ROOT/cacert.pem"
 
 mkdir -p "$ROOT"
 exec >> "$ROOT/install.log" 2>&1
@@ -17,6 +18,7 @@ test -s "$ROOT/config"
 test -s "$ROOT/kindle-weather-daemon.sh"
 test -s "$ROOT/kindle-weather-watchdog.sh"
 test -s "$XH"
+test -s "$CA_BUNDLE"
 chmod 755 "$XH"
 test -x "$XH"
 . "$ROOT/config"
@@ -25,7 +27,7 @@ case "${IMAGE_URL:-}" in https://*) ;; *) exit 2 ;; esac
 # The jailbreak invokes this hook during Diagnostics, where normal Kindle
 # services (including lipc-set-prop) are not available. Schedule the daemon
 # for normal-system cron; it performs the bounded HTTPS check at runtime.
-echo 'Scheduling weather daemon for normal-system cron; HTTPS check is deferred until normal boot'
+echo 'Scheduling weather daemon for normal-system cron with bundled Mozilla CA roots; HTTPS check is deferred until normal boot'
 chmod 755 "$ROOT/kindle-weather-daemon.sh" "$ROOT/kindle-weather-watchdog.sh"
 mntroot rw
 if [ -f "$CRONTAB_ROOT" ] && [ ! -f "$ROOT/root-crontab.original" ]; then
