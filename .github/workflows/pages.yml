@@ -31,6 +31,7 @@ jobs:
       - name: Serve and render the 600×800 screen
         env:
           CHROME_BIN: ${{ steps.chrome.outputs.chrome-path }}
+          CHROME_NO_SANDBOX: '1'
         run: |
           python3 -m http.server 4173 --bind 127.0.0.1 > /tmp/weather-http.log 2>&1 &
           server_pid=$!

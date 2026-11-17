@@ -37,10 +37,10 @@
 - Live browser preview: reloaded and visually inspected at 600×800 on 2026-11-17. Confirmed no horizontal dividers, pale 1px day markers, air and feels high/low dots and summaries, rain max only, no legend/local-time note; all 5 metric rows and footer fit.
 - `node scripts/fetch-weather.mjs` and `node scripts/render.mjs --snapshot`: succeeded at 14:58 Europe/London; live PNG verified exactly 600×800. Preview visually confirmed requested arrow/rain labels. K4 fallback ZIP rebuilt at 15:00.
 - Earlier live-preview check at 13:19 Europe/London confirmed fresh data, 5 graph rows, 3 date labels, and no clipping; its metric summary predates the current redesign.
-- GitHub Pages settings confirmed private-source Pages were unavailable on this account plan; user then requested public source, which enables Pages on GitHub Free. No push or deployment has occurred yet.
+- GitHub Pages settings confirmed private-source Pages were unavailable on this account plan; user then requested public source. Repository was made public, local source pushed through signed-in GitHub Desktop (commit `4f07af0`), and Pages source set to GitHub Actions. The first build exposed Chromium's sandbox restriction in the hosted runner; workflow fix is in progress.
 
 ## Compatibility and next action
-- Firmware 4.1.3 is within the published K4NT 4.0.0–4.1.4 method range. No jailbreak package or firmware change has been applied. Kindle browser page is ready at `/kindle.html` with meta refresh; actual HTTPS compatibility on device remains untested. User explicitly approved public source, and GitHub settings show the repository is public. Next: commit this deployment log update, push, configure GitHub Pages with GitHub Actions, verify the public URL, and ask the user to test that URL on the Kindle.
+- Firmware 4.1.3 is within the published K4NT 4.0.0–4.1.4 method range. No jailbreak package or firmware change has been applied. Kindle browser page is ready at `/kindle.html` with meta refresh; actual HTTPS compatibility on device remains untested. User explicitly approved public source, and GitHub settings show the repository is public. Next: commit the CI sandbox fix and project log, push, verify workflow succeeds and the public URL renders, then ask the user to test that URL on the Kindle.
 
 ## Source URLs
 - Open-Meteo docs: https://open-meteo.com/en/docs

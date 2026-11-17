@@ -13,6 +13,7 @@ const profile=await mkdtemp(join(tmpdir(),'witney-weather-chrome-'));
 try{
   const result=spawnSync(chrome,[
     '--headless=new','--disable-gpu','--hide-scrollbars','--force-device-scale-factor=1',
+    ...(process.env.CHROME_NO_SANDBOX==='1'?['--no-sandbox']:[]),
     '--window-size=600,800',`--user-data-dir=${profile}`,
     `--screenshot=${out}`,`--virtual-time-budget=${live||snapshot?15000:1500}`,url
   ],{encoding:'utf8'});
