@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <meta name="theme-color" content="#ffffff">
+  <title>Witney Weather</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main id="display" aria-label="Witney weather display">
+    <header class="masthead">
+      <h1>Witney<span>, UK</span></h1>
+      <div class="status" id="status"><span id="status-text"></span></div>
+    </header>
+    <section class="now" aria-label="Current weather">
+      <div class="now-grid">
+        <div class="temperature" id="current-temp">—<sup>°C</sup></div>
+        <div class="condition"><div id="condition-text">Waiting for weather</div><div class="feels">Feels like <b id="current-feels">—°C</b></div></div>
+      </div>
+      <div class="current-detail" id="current-detail">Humidity —% <i></i> Wind — mph</div>
+    </section>
+    <section class="forecast" aria-label="Hourly weather charts">
+      <div id="chart-wrap" class="chart-wrap"><div class="empty">Weather chart unavailable</div></div>
+    </section>
+    <footer class="footer"><span id="updated">Updated —</span><span>Weather data · <b>Open-Meteo</b></span></footer>
+    <div class="sr-only" id="announcement" aria-live="polite"></div>
+  </main>
+  <script type="module" src="app.js"></script>
+</body>
+</html>
