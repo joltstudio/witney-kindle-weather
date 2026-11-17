@@ -28,8 +28,13 @@ case "${IMAGE_URL:-}" in https://*) ;; *) exit 2 ;; esac
 echo 'Scheduling weather daemon for normal-system cron; HTTPS check is deferred until normal boot'
 chmod 755 "$ROOT/kindle-weather-daemon.sh" "$ROOT/kindle-weather-watchdog.sh"
 mntroot rw
-if [ ! -f "$ROOT/root-crontab.original" ]; then
+if [ -f "$CRONTAB_ROOT" ] && [ ! -f "$ROOT/root-crontab.original" ]; then
   cp "$CRONTAB_ROOT" "$ROOT/root-crontab.original"
+fi
+if [ ! -f "$CRONTAB_ROOT" ]; then
+  mkdir -p /etc/crontab
+  : > "$CRONTAB_ROOT"
+  echo 'Created missing root crontab'
 fi
 if ! grep -F "$MARKER" "$CRONTAB_ROOT" >/dev/null 2>&1; then
   printf '%s\n' '* * * * * /bin/sh /mnt/us/kindle-weather/kindle-weather-watchdog.sh' >> "$CRONTAB_ROOT"
