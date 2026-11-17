@@ -11,7 +11,13 @@ XH="$ROOT/xh"
 mkdir -p "$ROOT"
 exec >> "$ROOT/install.log" 2>&1
 echo "$(date '+%Y-%m-%d %H:%M:%S') Installer started"
-trap 'status=$?; if [ "$status" -ne 0 ]; then /usr/bin/lipc-set-prop com.lab126.wifid enable 0 2>/dev/null; fi; echo "Installer exited with status $status at $(date)"' EXIT
+LIPC=$(command -v lipc-set-prop 2>/dev/null || true)
+trap 'status=$?; if [ "$status" -ne 0 ] && [ -n "$LIPC" ]; then "$LIPC" com.lab126.wifid enable 0 2>/dev/null; fi; echo "Installer exited with status $status at $(date)"' EXIT
+if [ -z "$LIPC" ]; then
+  echo 'lipc-set-prop not found in PATH'
+  exit 127
+fi
+echo "Using Wi-Fi control command: $LIPC"
 
 test -s "$ROOT/config"
 test -s "$ROOT/kindle-weather-daemon.sh"
@@ -25,7 +31,7 @@ case "${IMAGE_URL:-}" in https://*) ;; *) exit 2 ;; esac
 # Probe the GitHub Pages image before making the periodic job persistent.
 # Any failure leaves the Kindle's current boot setup unchanged.
 echo 'Enabling Wi-Fi for HTTPS probe'
-/usr/bin/lipc-set-prop com.lab126.wifid enable 1
+"$LIPC" com.lab126.wifid enable 1
 sleep 8
 probe="$ROOT/first-image.png"
 separator='?'
@@ -35,7 +41,7 @@ echo 'Starting HTTPS image probe (25 second request timeout)'
 test -s "$probe"
 test "$(wc -c < "$probe" | tr -d ' ')" -gt 1000
 echo "HTTPS probe succeeded ($(wc -c < "$probe" | tr -d ' ') bytes)"
-/usr/bin/lipc-set-prop com.lab126.wifid enable 0
+"$LIPC" com.lab126.wifid enable 0
 
 chmod 755 "$ROOT/kindle-weather-daemon.sh" "$ROOT/kindle-weather-watchdog.sh"
 mntroot rw
