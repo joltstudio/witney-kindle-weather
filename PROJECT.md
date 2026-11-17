@@ -84,3 +84,11 @@
 - Oracle Always Free compute and reclamation: https://docs.oracle.com/en-us/iaas/Content/FreeTier/freetier_topic-Always_Free_Resources.htm
 - Oracle free tier billing and trial rules: https://docs.oracle.com/en-us/iaas/Content/FreeTier/freetier.htm
 - Kindle 4 NT HTTPS image-fetcher reference and v1.0.0-beta.4 release: https://github.com/pascalw/kindle-dash/releases/tag/v1.0.0-beta.4
+
+## Retry checkpoint — 2026-11-17
+- User reported the Kindle issue seemed fixed and asked for another check. Finder/device inventory and `/Volumes` show no mounted Kindle; macOS `diskutil` is unavailable in this execution environment. A read-only SSH attempt to the known USBNetwork address `192.168.15.244` timed out. No device files were read or changed. Weather fetch/display therefore remains unverified. Next action when resuming: make sure the Kindle is connected in USBNetwork mode (not USB Drive Mode) and retry SSH; inspect `daemon.log` and the current process/image before changing anything.
+
+## Image distortion and device freeze — 2026-11-17
+- User reports an image now appears on the Kindle but is stretched; user clarified that the connection dropping is USB, and that the Kindle freezes when opening Settings.
+- Verified both generated PNGs were 600×800, 8-bit RGB (PNG color type 2). A K4-specific report documents that `eips` stretches RGB PNGs and requires grayscale; MobileRead confirms `eips` displays PNG/JPG. Added a dependency-free converter in `scripts/grayscale-png.mjs` and wired `scripts/render.mjs` to emit 8-bit grayscale (color type 0). `npm test`: 7 passed. Converted the existing live output to grayscale; verified 600×800/color type 0 and visually checked it. Fresh Chrome rendering could not be verified because spawning Chrome failed with `status: null` in this sandbox.
+- No Kindle changes made. Read-only SSH attempts to USBNetwork `192.168.15.244` and last-known Wi-Fi `192.168.50.182` timed out; Finder and `/Volumes` show no Kindle. USB instability and Settings freeze are not yet diagnosed; avoid repeated reboot/menu attempts. The grayscale renderer fix is local and must be committed/pushed through GitHub Pages before the Kindle can fetch the corrected image on its next cycle. Next: deploy the source fix, then wait for the automatic image update; investigate the freeze only after stable device access is restored.

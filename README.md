@@ -1,6 +1,6 @@
 # Witney weather display
 
-A fixed 600×800, monochrome weather display for the Kindle 4 non-touch layout. The local page defaults to a live Open-Meteo forecast; `?mode=fixture` shows a fixed demonstration forecast for visual checks and the reproducible PNG.
+A fixed 600×800, monochrome weather display for the Kindle 4 non-touch layout. The local page defaults to a live Open-Meteo forecast; `?mode=fixture` shows a fixed demonstration forecast for visual checks and the reproducible PNG. PNG files are encoded as 8-bit grayscale because the K4 `eips` image viewer distorts RGB PNGs.
 
 ## Run it locally
 
@@ -12,10 +12,10 @@ python3 -m http.server 4173 --bind 127.0.0.1
 
 Open `http://127.0.0.1:4173/?mode=live` for live data or `http://127.0.0.1:4173/?mode=fixture` for the deterministic fixture. Stop the server with Ctrl+C.
 
-Run the logic tests:
+Run the logic and PNG-format tests:
 
 ```sh
-node --test tests/weather.test.js
+npm test
 ```
 
 Render the exact 600×800 fixture PNG (with the server running and Google Chrome installed):
@@ -54,7 +54,7 @@ The GitHub Pages preview is [https://joltstudio.github.io/witney-kindle-weather/
 
 ## Kindle compatibility status
 
-The user reports a D01100 Kindle 4 Non-Touch on firmware **4.1.3**. MobileRead's K4NT page lists 4.0.0–4.1.4, and the matching K4 package was used. Jailbreak completion was verified. The weather watchdog and daemon files are on the Kindle; observed logs show cron starts the daemon, but initial HTTPS attempts failed because the system CA bundle was absent. A custom Mozilla CA bundle and explicit `xh --verify` path are now added to the project; live fetch and screen rendering still need verification.
+The user reports a D01100 Kindle 4 Non-Touch on firmware **4.1.3**. MobileRead's K4NT page lists 4.0.0–4.1.4, and the matching K4 package was used. Jailbreak completion was verified. The user now reports the weather image appears on the Kindle but is stretched, and the Kindle freezes when opening Settings. USB and both known SSH paths are currently unavailable, so logs cannot be retrieved. The likely display cause is K4 `eips` stretching RGB PNGs; the renderer now converts browser RGB screenshots to 8-bit grayscale before publishing. This grayscale fix is local and not deployed yet.
 
 ## Reference pages
 
@@ -66,6 +66,8 @@ The user reports a D01100 Kindle 4 Non-Touch on firmware **4.1.3**. MobileRead's
 - MobileRead USBNetwork package thread: https://www.mobileread.com/forums/showthread.php?t=88004
 - K4NT weather-daemon reference: https://github.com/melihkarakelle/kindle4-weather-display
 - Kindle 4 HTTPS image-fetcher reference and release: https://github.com/pascalw/kindle-dash
+- Kindle 4 `eips` RGB-PNG stretch issue and grayscale requirement: https://mpetroff.net/2012/09/kindle-weather-display/
+- `eips` image format/options reference: https://wiki.mobileread.com/wiki/Eips
 - xh CLI custom CA bundle option: https://github.com/ducaale/xh/blob/master/doc/xh.1.md
 - Mozilla CA bundle source (MPL 2.0): https://curl.se/docs/caextract.html
 - Mozilla Public License 2.0: https://www.mozilla.org/en-US/MPL/2.0/

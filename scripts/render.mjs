@@ -1,7 +1,8 @@
 import { spawnSync } from 'node:child_process';
-import { mkdir, mkdtemp, readFile, rm } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
+import { grayscalePng } from './grayscale-png.mjs';
 
 const chrome=process.env.CHROME_BIN??(process.platform==='darwin'?'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome':'google-chrome');
 const live=process.argv.includes('--live');
@@ -18,8 +19,11 @@ try{
     `--screenshot=${out}`,`--virtual-time-budget=${live||snapshot?15000:1500}`,url
   ],{encoding:'utf8'});
   if(result.status!==0)throw new Error(result.stderr||`Chrome exited with ${result.status}`);
-  const png=await readFile(out);
+  const png=grayscalePng(await readFile(out));
+  await writeFile(out,png);
   const width=png.readUInt32BE(16),height=png.readUInt32BE(20);
+  const colorType=png[25];
   if(width!==600||height!==800)throw new Error(`Expected 600×800 PNG; got ${width}×${height}.`);
-  console.log(`Wrote ${out} (${width}×${height})`);
+  if(colorType!==0)throw new Error(`Expected an 8-bit grayscale PNG for Kindle eips; got color type ${colorType}.`);
+  console.log(`Wrote ${out} (${width}×${height}, grayscale PNG)`);
 }finally{await rm(profile,{recursive:true,force:true});}
