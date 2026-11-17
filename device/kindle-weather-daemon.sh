@@ -8,7 +8,9 @@ CONFIG="$ROOT/config"
 LOG="$ROOT/daemon.log"
 PIDFILE=/tmp/kindle-weather.pid
 EIPS=/usr/sbin/eips
-LIPC=$(command -v lipc-set-prop 2>/dev/null || true)
+# BusyBox sh on the Kindle 4 does not implement `command -v`; use the
+# firmware's known absolute path so the daemon works under cron's minimal shell.
+LIPC=/usr/bin/lipc-set-prop
 XH="$ROOT/xh"
 INTERVAL=1800
 WIFI_WAIT=8
@@ -71,8 +73,8 @@ sleep_until_refresh() {
 }
 
 log 'Daemon started'
-if [ -z "$LIPC" ]; then
-  log 'lipc-set-prop is unavailable in this runtime; exiting for watchdog retry'
+if [ ! -x "$LIPC" ]; then
+  log "lipc-set-prop is unavailable at $LIPC; exiting for watchdog retry"
   exit 1
 fi
 "$LIPC" com.lab126.powerd preventScreenSaver 1 2>/dev/null
