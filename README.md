@@ -34,31 +34,27 @@ The fixture render is `outputs/witney-weather-600x800.png`. For a validated live
 - The page refreshes every 30 minutes, stores the last valid response locally and shows `STALE DATA` if a refresh fails. With no usable cache it says data is unavailable. Open-Meteo forecast service uptime is not guaranteed.
 - Footer attribution is shown on-screen. Open-Meteo's free endpoint is limited to personal, non-commercial use (up to 10,000 requests/day) and its data requires CC BY 4.0 attribution. Do not use this endpoint for commercial display.
 
-## Hosted Kindle display
+## Hosted, chrome-free Kindle display
 
-`.github/workflows/pages.yml` validates a fresh Open-Meteo response, renders the 600×800 image, and deploys the static site to GitHub Pages on pushes and every 30 minutes. The GitHub Actions runner handles updates while your Mac is off. `kindle.html` is a simple image page with a 30-minute HTML refresh for the D01100 browser; it does not need the modern JavaScript app. The Kindle must remain on Wi-Fi with this page open. The firmware guide lists JavaScript and SSL support, but HTTPS compatibility with current GitHub Pages must be confirmed on the actual Kindle. [Kindle user guide](https://kindle.s3.amazonaws.com/Kindle_User%27s_Guide_4th_Edition.pdf).
+GitHub Actions fetches and validates Open-Meteo data, renders the exact 600×800 PNG, and updates the public GitHub Pages image every 30 minutes. The Kindle's stock browser cannot connect to that modern HTTPS site on firmware 4.1.3. The D01100 has been jailbroken successfully; its `You are Jailbroken` marker was verified.
 
-The source repository is public, so anyone can view or fork the code and forecast image history. The Pages site is also public. Deployment uses **Settings → Pages → Build and deployment → GitHub Actions**. The live Kindle page is [https://joltstudio.github.io/witney-kindle-weather/kindle.html](https://joltstudio.github.io/witney-kindle-weather/kindle.html). GitHub Actions refreshes the image every 30 minutes while the Kindle page reloads at the same cadence. Each page load adds a cache-busting query to the PNG URL so it fetches the newly deployed image. Open-Meteo's free endpoint is for personal, non-commercial use.
+The Kindle's bundled `wget` and `curl` are too old for modern HTTPS. This device path uses `xh`, a statically linked ARM HTTPS client bundled in the Kindle 4 Non-Touch release of [kindle-dash](https://github.com/pascalw/kindle-dash/releases/tag/v1.0.0-beta.4), whose maintainer reports K4NT testing. A Mac-side staging script downloads the pinned release, verifies its archive and binary SHA-256 values, and copies the client and scripts to the Kindle USB volume. The Kindle then fetches the public PNG directly from GitHub Pages over HTTPS; no server, host, API key or paid service is needed. The scheduled Pages workflow continues to refresh the image while the Mac is off.
 
-Once deployed, open `https://joltstudio.github.io/witney-kindle-weather/kindle.html` in the Kindle's **Experimental → Web Browser**. Bookmark it and leave it open. The latest image is generated every 30 minutes and the page reloads at the same cadence. If the Kindle rejects the HTTPS certificate or site, its stock browser cannot use this live URL; the ZIP/JPG transfer below remains the no-firmware-change fallback. Neither stock browser mode nor Picture Viewer will wake the sleeping Kindle to refresh the e-ink display.
+The daemon uses `eips` to draw the PNG directly to the screen, then sleeps and wakes on an RTC alarm every 30 minutes. The e-ink screen retains the last image without browser chrome. If the fetch fails, the previous frame stays displayed. Before adding the persistent watchdog, `runme-install.sh` probes the HTTPS image and writes its result to `/mnt/us/kindle-weather/install.log`.
 
-### Copy a snapshot to a Kindle 4 (no firmware changes)
-
-On the D01100/K4NT, use its built-in Picture Viewer as a static snapshot. The K4NT-specific workflow is to zip a JPG (PNG support is inconsistent), then copy the `.zip` archive into the Kindle's `documents` folder. It appears in Home as a book; open it to view the image. The full-screen image is 600×800 and does not auto-update. Repeat with a fresh image/archive when needed. This needs no jailbreak or firmware change. [K4NT Picture Viewer instructions](https://www.mobileread.com/forums/showthread.php?nojs=1&t=152104), [Kindle 4 User Guide](https://kindle.s3.amazonaws.com/Kindle_User%27s_Guide_4th_Edition.pdf).
-
-After rendering a fresh live PNG, package a JPG for the Kindle with macOS's built-in tools:
+The Kindle-dash release client is pinned to v1.0.0-beta.4 and verified by SHA-256 before staging. The preparation script also verifies the already downloaded K4 jailbreak archive (default path `/private/tmp/kindle-k4-jailbreak-1.8.N.zip`; override with `JAILBREAK_ARCHIVE=/path/to/archive`). With the Kindle mounted as `/Volumes/Kindle`, prepare the USB files by running:
 
 ```sh
-sips -s format jpeg outputs/witney-weather-live-600x800.png --out /tmp/witney-weather-live.jpg
-rm -f /tmp/witney-weather-kindle.zip
-zip -j /tmp/witney-weather-kindle.zip /tmp/witney-weather-live.jpg
+sh device/prepare-kindle-usb.sh
 ```
 
-The included `outputs/witney-weather-kindle.zip` is a fallback package built from the live snapshot at 15:00 Europe/London on 17 Nov 2026. Connect the Kindle by USB, copy the ZIP into its `documents` folder, eject it, then open the new item from Home. In Picture Viewer, use Menu → Full Screen Mode if needed. This is a manual snapshot workflow; the browser page is the live route.
+This copies the HTTPS client, config and scripts, plus the K4 jailbreak's Diagnostics trigger files and one-shot `runme.sh` installer. It does not execute the installer or alter Kindle system files. Safely eject, then repeat the K4 Diagnostics reboot sequence: Menu → Settings → Menu → Restart, then `D) Exit, Reboot or Disable Diags` → `R) Reboot System` → `Q) To continue` (left on the 5-way pad). The matching jailbreak package says this is safe to repeat and runs `runme.sh` after the jailbreak step. The installer adds the one-minute watchdog only if its live HTTPS PNG probe succeeds. The Kindle-specific TLS fetch is not yet verified on this device; verify the initial image and `/mnt/us/kindle-weather/install.log` before considering installation complete.
+
+The GitHub Pages preview is [https://joltstudio.github.io/witney-kindle-weather/kindle.html](https://joltstudio.github.io/witney-kindle-weather/kindle.html). It remains useful on modern browsers; it is not the device renderer.
 
 ## Kindle compatibility status
 
-The user reports firmware **4.1.3**. Amazon's update table lists 4.1.3 → 4.1.4 for Kindle 4th/5th generation; the MobileRead Kindle 4 Non-Touch page lists 4.0.0–4.1.4 for its K4NT method. That puts 4.1.3 inside the published range for D01100/K4NT. This update contains no device-specific package or installation steps; the screen will be delivered as a PNG until a separate device path is prepared and verified.
+The user reports a D01100 Kindle 4 Non-Touch on firmware **4.1.3**. MobileRead's K4NT page lists 4.0.0–4.1.4, and the matching K4 package was used. Jailbreak completion was verified on the mounted USB volume. The Kindle-dash release includes a statically linked ARM EABI5 `xh` binary and is reported tested on K4NT; the client and workflow still need live verification on this 4.1.3 device. No weather daemon files have been installed on the Kindle.
 
 ## Reference pages
 
@@ -66,6 +62,10 @@ The user reports firmware **4.1.3**. Amazon's update table lists 4.1.3 → 4.1.4
 - Open-Meteo free-use terms: https://open-meteo.com/en/terms
 - Amazon previous Kindle software updates: https://digprjsurvey.amazon.com/csad/help/node/GX3VVAQS4DYDE5KE?theme=light
 - MobileRead Kindle 4 Non-Touch compatibility page: https://wiki.mobileread.com/wiki/Kindle4NTHacking
+- MobileRead K4 jailbreak package thread: https://www.mobileread.com/forums/showthread.php?t=191158
+- MobileRead USBNetwork package thread: https://www.mobileread.com/forums/showthread.php?t=88004
+- K4NT weather-daemon reference: https://github.com/melihkarakelle/kindle4-weather-display
+- Kindle 4 HTTPS image-fetcher reference and release: https://github.com/pascalw/kindle-dash
 - MobileRead K4NT-specific Picture Viewer steps: https://www.mobileread.com/forums/showthread.php?nojs=1&t=152104
 - Kindle 4 User Guide (USB transfer): https://kindle.s3.amazonaws.com/Kindle_User%27s_Guide_4th_Edition.pdf
 - Inter font and SIL OFL licence: https://github.com/rsms/inter/blob/master/LICENSE.txt
