@@ -12,6 +12,9 @@
   </style>
 </head>
 <body>
-  <img src="outputs/witney-weather-live-600x800.png" width="600" height="800" alt="Witney weather forecast">
+  <img id="forecast" src="outputs/witney-weather-live-600x800.png" width="600" height="800" alt="Witney weather forecast">
+  <script>
+    document.getElementById('forecast').src = 'outputs/witney-weather-live-600x800.png?v=' + new Date().getTime();
+  </script>
 </body>
 </html>
