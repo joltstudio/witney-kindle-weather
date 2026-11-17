@@ -55,4 +55,4 @@ mkdir -p "$KINDLE_VOLUME/diagnostic_logs"
 cp "$WORK/jailbreak/diagnostic_logs/device_info.xml" "$KINDLE_VOLUME/diagnostic_logs/device_info.xml"
 
 echo "Staged the verified static ARM xh client, weather scripts, and matching K4 jailbreak trigger files on $KINDLE_VOLUME."
-echo "No installer has run. Review $DEST/config, then safely eject the Kindle."
+echo "The installer runs from the jailbreak Diagnostics hook. Review $DEST/config, then safely eject the Kindle."

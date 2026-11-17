@@ -24,14 +24,17 @@ case "${IMAGE_URL:-}" in https://*) ;; *) exit 2 ;; esac
 
 # Probe the GitHub Pages image before making the periodic job persistent.
 # Any failure leaves the Kindle's current boot setup unchanged.
+echo 'Enabling Wi-Fi for HTTPS probe'
 /usr/bin/lipc-set-prop com.lab126.wifid enable 1
 sleep 8
 probe="$ROOT/first-image.png"
 separator='?'
 case "$IMAGE_URL" in *\?*) separator='&' ;; esac
-"$XH" -d -q -o "$probe" get "${IMAGE_URL}${separator}probe=$(date +%s)"
+echo 'Starting HTTPS image probe (25 second request timeout)'
+"$XH" --timeout=25 -d -o "$probe" get "${IMAGE_URL}${separator}probe=$(date +%s)"
 test -s "$probe"
 test "$(wc -c < "$probe" | tr -d ' ')" -gt 1000
+echo "HTTPS probe succeeded ($(wc -c < "$probe" | tr -d ' ') bytes)"
 /usr/bin/lipc-set-prop com.lab126.wifid enable 0
 
 chmod 755 "$ROOT/kindle-weather-daemon.sh" "$ROOT/kindle-weather-watchdog.sh"
