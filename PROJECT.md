@@ -7,7 +7,7 @@
 - No horizontal rules; local midnight dividers are pale 1px vertical strokes. Primary type is bundled Inter. No legend row or “Local time · 24 h” note.
 - Refresh every 30 minutes; cache last valid response in localStorage. On fetch failure, keep the cache and label it stale; without cache, show unavailable status.
 - Static ES module app with bundled Inter weights (SIL OFL), no runtime packages. Live mode is default; fixture mode is deterministic.
-- Hosting plan: scheduled GitHub Actions snapshot + GitHub Pages. Workflow and `kindle.html` are prepared; GitHub repository and Pages configuration remain pending.
+- Hosting plan: scheduled GitHub Actions snapshot + GitHub Pages. Workflow and `kindle.html` are prepared; public repository `joltstudio/witney-kindle-weather` was created, but source push and Pages activation are pending.
 
 ## Architecture
 - `index.html`, `app.js`, `weather.js`, `styles.css`, `config.js`: browser page, renderer, API/validation/time logic, and configuration. `kindle.html` is a legacy-browser-compatible image page with 30-minute refresh.
@@ -25,7 +25,7 @@
 - Tests: `npm test` (or `node --test tests/weather.test.js`).
 - Fixture PNG: `node scripts/render.mjs` (requires Google Chrome at `/Applications/Google Chrome.app/Contents/MacOS/Google Chrome`).
 - Live snapshot PNG: `node scripts/fetch-weather.mjs` then with server running `node scripts/render.mjs --snapshot`; direct browser fetch alternative `node scripts/render.mjs --live`.
-- Deployment target: public `joltstudio/witney-kindle-weather` GitHub Pages; no repository/remote exists yet. Enable Pages with source **GitHub Actions** after the first push.
+- Deployment target: `https://github.com/joltstudio/witney-kindle-weather` (public, currently empty); local `main` commit `2831f0c` with remote `origin` configured. Pages must use source **GitHub Actions** after content is pushed.
 
 ## Completed and verified — 2026-11-17
 - Repository was empty; no AGENTS.md instructions found.
@@ -39,7 +39,7 @@
 - Earlier live-preview check at 13:19 Europe/London confirmed fresh data, 5 graph rows, 3 date labels, and no clipping; its metric summary predates the current redesign.
 
 ## Compatibility and next action
-- Firmware 4.1.3 is within the published K4NT 4.0.0–4.1.4 method range. No jailbreak package or firmware change has been applied. Kindle browser page is ready at `/kindle.html` with meta refresh; actual HTTPS compatibility on device remains untested. GitHub account `joltstudio` is authenticated in Chrome, but no repository, remote, or `gh` CLI is configured. Next: create/push `joltstudio/witney-kindle-weather`, set Pages source to GitHub Actions, verify deployment URL and show user how to open it on Kindle.
+- Firmware 4.1.3 is within the published K4NT 4.0.0–4.1.4 method range. No jailbreak package or firmware change has been applied. Kindle browser page is ready at `/kindle.html` with meta refresh; actual HTTPS compatibility on device remains untested. GitHub repo created and local commit prepared; automatic review rejected pushing the source and generated snapshot to the public repository because the user had not explicitly authorized exposing that payload to that destination. Next: obtain explicit approval for public source/data publication, then push, enable Pages source **GitHub Actions**, verify deployment, and test the URL on the Kindle.
 
 ## Source URLs
 - Open-Meteo docs: https://open-meteo.com/en/docs
