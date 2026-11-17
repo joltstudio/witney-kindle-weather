@@ -7,7 +7,7 @@
 - No horizontal rules; local midnight dividers are pale 1px vertical strokes. Primary type is bundled Inter. No legend row or “Local time · 24 h” note.
 - Refresh every 30 minutes; cache last valid response in localStorage. On fetch failure, keep the cache and label it stale; without cache, show unavailable status.
 - Static ES module app with bundled Inter weights (SIL OFL), no runtime packages. Live mode is default; fixture mode is deterministic.
-- Hosting plan: public source repository with a public GitHub Pages site, scheduled PNG updates, and `kindle.html` refresh. GitHub Free supports Pages for public repositories.
+- Hosting: public source at `https://github.com/joltstudio/witney-kindle-weather` and public GitHub Pages at `https://joltstudio.github.io/witney-kindle-weather/kindle.html`. GitHub Actions refreshes the forecast image every 30 minutes; the Kindle legacy page refreshes at the same cadence. GitHub Free supports Pages for public repositories.
 
 ## Architecture
 - `index.html`, `app.js`, `weather.js`, `styles.css`, `config.js`: browser page, renderer, API/validation/time logic, and configuration. `kindle.html` is a legacy-browser-compatible image page with 30-minute refresh.
@@ -25,7 +25,7 @@
 - Tests: `npm test` (or `node --test tests/weather.test.js`).
 - Fixture PNG: `node scripts/render.mjs` (requires Google Chrome at `/Applications/Google Chrome.app/Contents/MacOS/Google Chrome`).
 - Live snapshot PNG: `node scripts/fetch-weather.mjs` then with server running `node scripts/render.mjs --snapshot`; direct browser fetch alternative `node scripts/render.mjs --live`.
-- Deployment target: `https://github.com/joltstudio/witney-kindle-weather` (verified public, still empty before push). Local `main` has commits `2831f0c` and `c534998`, with remote `origin` configured. User explicitly requested public source publication; push and Pages activation are now authorized and underway.
+- Deployment target: `https://github.com/joltstudio/witney-kindle-weather` (public; local `main` pushed through signed-in GitHub Desktop). Latest source commit `300b5d1`; latest successful GitHub Actions Pages build is run `44122620626` (44 seconds). Pages source is GitHub Actions. The live `/kindle.html` URL loaded successfully in browser and displayed the freshly updated 600×800 image (footer update time 17 Nov 2026, 16:10 Europe/London).
 
 ## Completed and verified — 2026-11-17
 - Repository was empty; no AGENTS.md instructions found. User completed GitHub reauthentication, first made the repository private, then explicitly requested public source; GitHub settings now verify public visibility.
@@ -37,10 +37,10 @@
 - Live browser preview: reloaded and visually inspected at 600×800 on 2026-11-17. Confirmed no horizontal dividers, pale 1px day markers, air and feels high/low dots and summaries, rain max only, no legend/local-time note; all 5 metric rows and footer fit.
 - `node scripts/fetch-weather.mjs` and `node scripts/render.mjs --snapshot`: succeeded at 14:58 Europe/London; live PNG verified exactly 600×800. Preview visually confirmed requested arrow/rain labels. K4 fallback ZIP rebuilt at 15:00.
 - Earlier live-preview check at 13:19 Europe/London confirmed fresh data, 5 graph rows, 3 date labels, and no clipping; its metric summary predates the current redesign.
-- GitHub Pages settings confirmed private-source Pages were unavailable on this account plan; user then requested public source. Repository was made public, local source pushed through signed-in GitHub Desktop (commit `4f07af0`), and Pages source set to GitHub Actions. First run exposed Chromium's sandbox restriction; second run exposed a transient Open-Meteo connection timeout. CI Chromium flag is fixed and API retries are being added.
+- GitHub Pages settings confirmed private-source Pages were unavailable on this account plan; user then requested public source. Repository was made public, source pushed through signed-in GitHub Desktop, and Pages source set to GitHub Actions. First run exposed Chromium's sandbox restriction; second run exposed a transient Open-Meteo connection timeout. Added a CI-only Chromium `--no-sandbox` flag and three bounded forecast fetch attempts. Workflow run `44122620626` completed successfully; the deployed Kindle URL loaded and showed the live image.
 
 ## Compatibility and next action
-- Firmware 4.1.3 is within the published K4NT 4.0.0–4.1.4 method range. No jailbreak package or firmware change has been applied. Kindle browser page is ready at `/kindle.html` with meta refresh; actual HTTPS compatibility on device remains untested. User explicitly approved public source, and GitHub settings show the repository is public. Next: push the Chromium and API retry fixes, verify workflow succeeds and the public URL renders, then ask the user to test that URL on the Kindle.
+- Firmware 4.1.3 is within the published K4NT 4.0.0–4.1.4 method range. No jailbreak package or firmware change has been applied. Public site and automatic workflow are deployed; the URL works in desktop Chrome. Actual HTTPS compatibility and refresh behavior on the physical Kindle remain untested. Next: user opens `https://joltstudio.github.io/witney-kindle-weather/kindle.html` in Experimental → Web Browser on the Kindle, bookmarks it, leaves it open, and reports whether the page/image loads. If HTTPS is rejected, use the documented ZIP/JPG USB fallback.
 
 ## Source URLs
 - Open-Meteo docs: https://open-meteo.com/en/docs
