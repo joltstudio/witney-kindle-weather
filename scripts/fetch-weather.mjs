@@ -1,6 +1,6 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
-import { API_URL, validatePayload, selectNext48 } from '../weather.js';
+import { API_URL, validatePayload, selectForecastHours } from '../weather.js';
 import { fetchStationData } from '../observations.js';
 
 let response;
@@ -23,7 +23,7 @@ if(response?.ok){
   try{
     const payload=validatePayload(await response.json());
     const fetchedAt=Date.now();
-    selectNext48(payload,fetchedAt);
+    selectForecastHours(payload,fetchedAt);
     const {stationObservation,stationObservations}=await fetchStationData(fetch,fetchedAt);
     if(!stationObservation)console.warn('No fresh, valid EGVN METAR; forecast will be used alone.');
     snapshot={payload,fetchedAt,stationObservation,stationObservations};
@@ -35,7 +35,7 @@ if(!snapshot){
   try{
     const previous=JSON.parse(await readFile(resolve('outputs/weather-snapshot.json'),'utf8'));
     validatePayload(previous.payload);
-    selectNext48(previous.payload,previous.fetchedAt);
+    selectForecastHours(previous.payload,previous.fetchedAt);
     if(Date.now()-previous.fetchedAt>24*60*60_000)throw new Error('Cached forecast is older than 24 hours.');
     snapshot=previous;
     console.warn(`Open-Meteo unavailable (${requestError?.message??(response?`HTTP ${response.status}`:'no response')}); keeping cached forecast from ${new Date(previous.fetchedAt).toISOString()}.`);

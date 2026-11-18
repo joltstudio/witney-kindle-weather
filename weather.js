@@ -2,13 +2,13 @@ import { CONFIG } from './config.js';
 
 export const API_URL = (() => {
   // Keep Open-Meteo's Best Match default: for the UK it selects UKV when
-  // available and fills gaps with global guidance across the 48-hour window.
+  // available and fills gaps with global guidance across the forecast window.
   const temperatureUnit=CONFIG.units.temperature==='°F'?'fahrenheit':'celsius';
   const windUnit=CONFIG.units.wind==='km/h'?'kmh':CONFIG.units.wind==='m/s'?'ms':CONFIG.units.wind==='kn'?'kn':'mph';
   const precipitationUnit=CONFIG.units.precipitation==='in'?'inch':'mm';
   const q = new URLSearchParams({
     latitude: CONFIG.location.latitude, longitude: CONFIG.location.longitude,
-    timezone: CONFIG.location.timezone, timeformat: 'unixtime', forecast_hours: '50',
+    timezone: CONFIG.location.timezone, timeformat: 'unixtime', forecast_hours: String(CONFIG.forecast.hours + 1),
     temperature_unit: temperatureUnit, wind_speed_unit: windUnit, precipitation_unit: precipitationUnit,
     current: 'temperature_2m,apparent_temperature,relative_humidity_2m,wind_speed_10m,weather_code',
     hourly: 'temperature_2m,apparent_temperature,precipitation,relative_humidity_2m,wind_speed_10m,sunshine_duration'
@@ -19,7 +19,7 @@ export const API_URL = (() => {
 const REQUIRED = ['temperature_2m','apparent_temperature','precipitation','relative_humidity_2m','wind_speed_10m','sunshine_duration'];
 
 export function validatePayload(payload) {
-  if (!payload || payload.error || payload.timezone !== CONFIG.location.timezone || !payload.hourly || !Array.isArray(payload.hourly.time) || payload.hourly.time.length < 48) throw new Error('Weather response is incomplete.');
+  if (!payload || payload.error || payload.timezone !== CONFIG.location.timezone || !payload.hourly || !Array.isArray(payload.hourly.time) || payload.hourly.time.length < CONFIG.forecast.hours + 1) throw new Error('Weather response is incomplete.');
   const n = payload.hourly.time.length;
   for (const key of REQUIRED) if (!Array.isArray(payload.hourly[key]) || payload.hourly[key].length !== n) throw new Error(`Weather response is missing ${key}.`);
   if (!payload.current || !Number.isFinite(payload.current.temperature_2m) || !Number.isFinite(payload.current.apparent_temperature)) throw new Error('Current conditions are missing.');
@@ -28,15 +28,15 @@ export function validatePayload(payload) {
   return payload;
 }
 
-export function selectNext48(payload, nowMs) {
+export function selectForecastHours(payload, nowMs) {
   validatePayload(payload);
-  // Start at the next complete forecast hour so the full 48 plotted hours
-  // are still ahead of the current time when a request lands mid-hour.
+  // Start at the next complete forecast hour so the full configured window
+  // is still ahead when a request lands during a partial hour.
   const hour = Math.ceil(nowMs / 3600000) * 3600;
-  const end = hour + 48 * 3600;
+  const end = hour + CONFIG.forecast.hours * 3600;
   const h = payload.hourly;
   const indexes = h.time.map((t,i)=>({t:Number(t),i})).filter(({t})=>t>=hour && t<end);
-  if (indexes.length !== 48) throw new Error(`Expected 48 hourly forecasts; received ${indexes.length}.`);
+  if (indexes.length !== CONFIG.forecast.hours) throw new Error(`Expected ${CONFIG.forecast.hours} hourly forecasts; received ${indexes.length}.`);
   return indexes.map(({t,i})=>({
     time:t, temp:finiteOrNull(h.temperature_2m[i]), feels:finiteOrNull(h.apparent_temperature[i]),
     rain:finiteOrNull(h.precipitation[i]),
@@ -48,7 +48,7 @@ export function selectNext48(payload, nowMs) {
 export function finiteOrNull(v) { const n=Number(v); return v === null || v === '' || !Number.isFinite(n) ? null : n; }
 export const sunshineMinutes = seconds => finiteOrNull(seconds) === null ? null : Math.round(seconds / 60);
 
-export function summarize48(hours) {
+export function summarizeForecast(hours) {
   const extrema=key=>{
     const values=hours.map((h,i)=>({value:h[key],index:i})).filter(x=>Number.isFinite(x.value));
     const high=values.length?values.reduce((a,b)=>b.value>a.value?b:a):null;

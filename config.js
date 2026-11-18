@@ -1,6 +1,7 @@
 export const CONFIG = {
   location: { name: 'Witney', country: 'UK', latitude: 51.783, longitude: -1.486, timezone: 'Europe/London' },
   units: { temperature: '°C', precipitation: 'mm', humidity: '%', wind: 'mph', sunshine: 'min/h' },
+  forecast: { hours: 48 },
   api: { refreshMinutes: 30, timeoutMs: 10000, cacheKey: 'witney-weather-v2' },
   observations: { provider: 'NOAA Aviation Weather Center METAR', stationId: 'EGVN', stationName: 'Brize Norton', historyHours: 24, maxAgeMinutes: 90, maxFutureSkewMinutes: 5, timeoutMs: 8000 },
   typography: { body: 'Inter', scale: 1.45 },
