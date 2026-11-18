@@ -44,7 +44,9 @@ The first device version used a system-cron watchdog and a background daemon tha
 
 ## App-like Kindle launcher
 
-The Kindle 4 uses the legacy KUAL-KDK Kindlet. Its required MobileRead Kindlet Kit (MKK) is separate from the jailbreak. A prepared K4 bundle is in `outputs/witney-weather-kual-install.zip`; it contains the K4-targeted MKK update package, `KUAL-KDK-1.0.azw2`, and the `Witney Weather` KUAL extension. Install only after verifying the stop-only watchdog has taken effect and the Kindle is stable. The first MKK installation is triggered from the Kindle's `Menu > Settings > Menu > Update Your Kindle`; KUAL should then appear in the library. Open KUAL > Witney Weather > Open Weather Display. Use Refresh Forecast Now or Exit Weather Display from KUAL. Firmware 4.1.3 compatibility is based on the KUAL maintainer's legacy KDK instructions and the K4 package target; the app has not yet been exercised on the device.
+The Kindle 4 uses the legacy KUAL-KDK Kindlet, with MKK installed separately from the jailbreak. A compatibility problem was found on this D01100: its KUAL document appears in the library but does not launch. The original 2014 developer certificate expired in April 2025. KUAL's maintainer rebuilt KUAL against a 2025 certificate and published an experimental keystore-only installer, which the maintainer explicitly describes as untested. Amazon lists firmware 4.1.4 as current and permits a direct upgrade from 4.1.3; K4 user reports say the new KUAL certificate setup requires 4.1.4. This Kindle remains on 4.1.3, so do not run the previously staged 2014 MKK package expecting it to fix KUAL.
+
+`sh scripts/build-kual-install.sh` prepares a corrected local bundle with MKK 2014, the 2025 K4 keystore update, KUAL-KDK-1.0.azw2, and the Witney Weather extension. Before any install, verify the weather watchdog has stopped and the Kindle is stable. If proceeding, update firmware using Amazon's official 4.1.4 file first, then handle MKK and the 2025 keystore one update at a time, keeping Wi-Fi off during certificate setup. Ask for immediate confirmation before running the untested third-party keystore installer. Some K4 users report Wi-Fi can replace the updated keystore on an unregistered Kindle; test whether KUAL remains launchable after Wi-Fi is enabled before relying on this app. The weather extension itself has not yet been exercised on-device.
 
 The Kindle-dash release client is pinned to v1.0.0-beta.4 and verified by SHA-256 before staging. The preparation script also verifies the already downloaded K4 jailbreak archive (default path `/private/tmp/kindle-k4-jailbreak-1.8.N.zip`; override with `JAILBREAK_ARCHIVE=/path/to/archive`). That script is for the initial jailbreak setup only; do not run it again on this already-jailbroken device. With the Kindle mounted as `/Volumes/Kindle`, it can be run by:
 
@@ -58,7 +60,7 @@ The GitHub Pages preview is [https://joltstudio.github.io/witney-kindle-weather/
 
 ## Kindle compatibility status
 
-The target is a jailbroken D01100 Kindle 4 Non-Touch, firmware **4.1.3**. Jailbreak completion and the existing USBNetwork extension are verified. GitHub Pages is public and refreshes the image every 30 minutes. The device log captured successful image displays alongside DNS/network failures. A read-only backup of the user partition was made, and the emergency watchdog replacement is on the Kindle; whether cron stopped the daemon is not confirmed. A local KUAL extension and K4 install bundle pass local checks, but MKK/KUAL installation, on-device launch/exit, refreshed display and stability remain unverified. Keep the device backed up and do not use factory reset or filesystem repair while this remains unresolved.
+The target is a jailbroken D01100 Kindle 4 Non-Touch, firmware **4.1.3**. Jailbreak completion and the existing USBNetwork extension are verified. GitHub Pages is public and refreshes the image every 30 minutes. The device log captured successful image displays alongside DNS/network failures. A read-only backup of the user partition was made, and the emergency watchdog replacement remains on the Kindle; whether cron stopped the daemon is not confirmed. KUAL appears in the library but did not launch. The original 2014 MKK package was staged, then disappeared from the USB root before the next inspection, so whether it was executed is unknown. A corrected 2025 keystore package is being prepared locally, but current KUAL reports indicate firmware 4.1.4 is needed first. No further update package should be run until the device is stable and the firmware/certificate sequence is confirmed.
 
 ## Reference pages
 
@@ -80,6 +82,8 @@ The target is a jailbroken D01100 Kindle 4 Non-Touch, firmware **4.1.3**. Jailbr
 - MobileRead Kindlet Kit (MKK): https://www.mobileread.com/forums/showthread.php?t=233932
 - KUAL launcher and legacy Kindlet instructions: https://www.mobileread.com/forums/showthread.php?t=203326
 - KUAL K4/MRPI guide: https://github.com/KindleModding/kindlemodding.github.io/blob/main/content/jailbreaking/Legacy/post-jailbreak/installing-kual-mrpi/__index.md
+- KUAL maintainer's 2025 updated developer keystore post: https://www.mobileread.com/forums/showpost.php?p=4506164&postcount=1295
+- Kindle 4 KUAL certificate/firmware troubleshooting: https://www.mobileread.com/forums/showthread.php?p=4517996
 - Inter font and SIL OFL licence: https://github.com/rsms/inter/blob/master/LICENSE.txt
 - GitHub Pages custom workflows: https://docs.github.com/en/pages/getting-started-with-github-pages/using-custom-workflows-with-github-pages
 - GitHub Actions billing: https://docs.github.com/en/billing/concepts/product-billing/github-actions
