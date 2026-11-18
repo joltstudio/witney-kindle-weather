@@ -7,7 +7,7 @@ on:
       - README.md
       - PROJECT.md
   schedule:
-    - cron: '17,47 * * * *'
+    - cron: '19,49 * * * *'
   workflow_dispatch:
 
 permissions:
