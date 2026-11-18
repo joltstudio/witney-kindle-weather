@@ -180,3 +180,16 @@
 - Corrected README's stale device status: Kindle firmware is 4.1.4; KUAL now launches; app log confirms a successful open and PNG fetch. Removed old advice to rerun the KUAL/certificate installers.
 - User reports a top bar has reappeared. The previous KUAL menu text redraw fix is installed; the remaining top strip is likely the Kindle system status bar, not KUAL. K4 legacy display references document framework redraws over full-screen output when Wi-Fi/battery state changes. No firmware/system changes are included in this design deploy; do not claim the status bar was hidden.
 - Next: commit/push these source changes, verify the GitHub Pages build/deploy workflow succeeds, and report the published image update time plus device polling interval. The app fetches on open and every 30 minutes while left open, so reopening after Pages deployment fetches immediately; otherwise it may take up to 30 minutes.
+
+## Design deployed — 2026-11-18
+- Commit `fda0ec9` (`Enlarge and space Kindle weather charts`) was pushed to `main`.
+- Verified GitHub Actions run #17 (`44296043223`) completed successfully; both the image build and GitHub Pages deploy passed.
+- Reloaded the public Kindle image at `https://joltstudio.github.io/witney-kindle-weather/kindle.html`; it shows the approved four-row layout and footer `Updated 18 Nov, 11:35`. Public deploy is live.
+- Kindle extension fetches immediately when opened/refreshed and polls every 30 minutes while running; expected screen update is immediate on the next fetch, otherwise within 30 minutes plus connection delay. Device screen has not been re-observed after this publish.
+- Top menu/status strip is not modified by this web deploy. KUAL's delayed menu redraw fix remains installed on device; if an overlay returns, distinguish the Kindle native name/Wi-Fi/battery status strip from the KUAL action row. No new device-side changes were made.
+
+## Native status-bar fix staged — 2026-11-18
+- The new Kindle photo confirms the overlay is the native Pillow strip (`Wesley's Kindle`, Wi-Fi and battery), not the KUAL action row.
+- Added a reversible LIPC call to the weather loop: `com.lab126.pillow disableEnablePillow disable` before drawing each fetched image; the EXIT/TERM/INT cleanup path sends `... enable` and restores the screensaver setting. It does not stop the framework or modify system files. Reference implementation/API: https://github.com/koreader/koreader/blob/master/platform/kindle/koreader.sh and https://community.home-assistant.io/t/kindle-e-ink-home-info-display/378002.
+- `sh -n device/kual-extension/WitneyWeather/bin/weather-loop.sh` passed. Backed up the pre-change installed loop to ignored `work/device-backup-2026-11-18-statusbar/weather-loop.sh.before` (SHA-256 `45a3f6f4ac894b69bb5375399a6ceb6ac0ce8922ad03cd3318a02817baf675da`).
+- Copied the updated loop to `/Volumes/Kindle/extensions/WitneyWeather/bin/weather-loop.sh`; byte comparison and SHA-256 `525b41ecde617c0f9a368242d9d695f11743efdc683bb8dfb8a8ea2071955bec` verified. Safely ejected the USB volume through Finder at 11:51. Next: disconnect USB, open KUAL > Witney Weather > Open Weather Display, and verify the top strip stays hidden. Exit should restore it. On-device LIPC effect is not yet confirmed.

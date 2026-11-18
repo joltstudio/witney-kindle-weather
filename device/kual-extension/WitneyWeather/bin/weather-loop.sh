@@ -13,6 +13,7 @@ EIPS=/usr/sbin/eips
 INTERVAL=1800
 DOWNLOAD_TIMEOUT=25
 REFRESH_NOW=0
+PILLOW_DISABLED=0
 
 log() { echo "$(date '+%Y-%m-%d %H:%M:%S') $1" >> "$LOG"; }
 cleanup() {
@@ -30,6 +31,11 @@ cleanup() {
   fi
   rm -f "$FETCHPIDFILE"
   rm -f "$PIDFILE"
+  if [ "$PILLOW_DISABLED" -eq 1 ]; then
+    "$LIPC" com.lab126.pillow disableEnablePillow enable 2>/dev/null || true
+    log 'Kindle status bar restored'
+    PILLOW_DISABLED=0
+  fi
   "$LIPC" com.lab126.powerd preventScreenSaver 0 2>/dev/null || true
 }
 trap 'exit 0' TERM INT
@@ -91,6 +97,14 @@ fetch_and_display() {
     rm -f "$temp"
     log 'Weather fetch failed; last good screen retained'
     return 1
+  fi
+  # The stock Pillow status bar can redraw over a full-screen eips image.
+  # Hide only that bar while this KUAL display is active; restore it on Exit.
+  if "$LIPC" com.lab126.pillow disableEnablePillow disable 2>/dev/null; then
+    PILLOW_DISABLED=1
+    log 'Kindle status bar hidden'
+  else
+    log 'Could not hide Kindle status bar; displaying forecast anyway'
   fi
   if "$EIPS" -f -g "$temp"; then
     mv "$temp" "$ROOT/weather.png"
