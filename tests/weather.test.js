@@ -23,6 +23,15 @@ test('keeps local midnight dates across the spring DST change',()=>{
   assert.equal(hours.filter(h=>hourAt(h.time)===0).length,3);
 });
 
+test('starts a complete 48-hour forecast at the next full UTC hour',()=>{
+  const payload=structuredClone(DEMO_PAYLOAD),start=Date.parse('2026-11-17T10:00:00Z')/1000;
+  payload.hourly.time=payload.hourly.time.map((_,i)=>start+i*3600);
+  const hours=selectNext48(payload,(start+20*60)*1000);
+  assert.equal(hours.length,48);
+  assert.equal(hours[0].time,start+3600);
+  assert.equal(hours.at(-1).time,start+48*3600);
+});
+
 test('rejects malformed or missing weather fields',()=>{
   assert.equal(validatePayload(DEMO_PAYLOAD),DEMO_PAYLOAD);
   const broken=structuredClone(DEMO_PAYLOAD);broken.hourly.wind_speed_10m.pop();
@@ -35,6 +44,7 @@ test('uses configured units and converts sunshine seconds to minutes/hour',()=>{
   assert.equal(query.get('temperature_unit'),'celsius');
   assert.equal(query.get('wind_speed_unit'),'mph');
   assert.equal(query.get('precipitation_unit'),'mm');
+  assert.equal(query.has('models'),false,'Best Match remains automatic');
   assert.equal(sunshineMinutes(1800),30);
   assert.equal(sunshineMinutes(null),null);
 });

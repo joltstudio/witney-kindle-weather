@@ -31,8 +31,17 @@ jobs:
         id: chrome
         with:
           install-dependencies: true
+      - uses: actions/cache/restore@v4
+        with:
+          path: outputs/weather-snapshot.json
+          key: weather-snapshot-${{ github.run_id }}
+          restore-keys: weather-snapshot-
       - name: Fetch and validate latest forecast
         run: node scripts/fetch-weather.mjs
+      - uses: actions/cache/save@v4
+        with:
+          path: outputs/weather-snapshot.json
+          key: weather-snapshot-${{ github.run_id }}
       - name: Serve and render the 600×800 screen
         env:
           CHROME_BIN: ${{ steps.chrome.outputs.chrome-path }}
@@ -49,9 +58,10 @@ jobs:
       - name: Assemble Pages site
         run: |
           mkdir -p site/assets site/outputs
-          cp index.html app.js weather.js config.js styles.css kindle.html site/
+          cp index.html app.js weather.js config.js observations.js styles.css kindle.html site/
           cp -R assets/fonts site/assets/
           cp outputs/witney-weather-live-600x800.png site/outputs/
+          cp outputs/weather-snapshot.json site/outputs/
       - uses: actions/upload-pages-artifact@v3
         with:
           path: site

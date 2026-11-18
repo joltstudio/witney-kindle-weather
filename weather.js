@@ -1,6 +1,8 @@
 import { CONFIG } from './config.js';
 
 export const API_URL = (() => {
+  // Keep Open-Meteo's Best Match default: for the UK it selects UKV when
+  // available and fills gaps with global guidance across the 48-hour window.
   const temperatureUnit=CONFIG.units.temperature==='°F'?'fahrenheit':'celsius';
   const windUnit=CONFIG.units.wind==='km/h'?'kmh':CONFIG.units.wind==='m/s'?'ms':CONFIG.units.wind==='kn'?'kn':'mph';
   const precipitationUnit=CONFIG.units.precipitation==='in'?'inch':'mm';
@@ -28,7 +30,9 @@ export function validatePayload(payload) {
 
 export function selectNext48(payload, nowMs) {
   validatePayload(payload);
-  const hour = Math.floor(nowMs / 3600000) * 3600;
+  // Start at the next complete forecast hour so the full 48 plotted hours
+  // are still ahead of the current time when a request lands mid-hour.
+  const hour = Math.ceil(nowMs / 3600000) * 3600;
   const end = hour + 48 * 3600;
   const h = payload.hourly;
   const indexes = h.time.map((t,i)=>({t:Number(t),i})).filter(({t})=>t>=hour && t<end);

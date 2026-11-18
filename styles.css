@@ -17,6 +17,7 @@ body{display:flex;justify-content:center;align-items:flex-start;overflow:auto}
 .current-detail{display:flex;align-items:center;gap:0;white-space:nowrap;font-size:calc(10px * var(--type-scale,1));color:#3f4449;margin-top:0;letter-spacing:.005em}
 .current-detail b{color:#000;font-weight:700}
 .current-detail .separator{white-space:pre;color:#555b60}
+.observation-detail{font-size:calc(9.5px * var(--type-scale,1));line-height:1.2;color:#343a3f;margin-top:3px;white-space:nowrap;font-variant-numeric:tabular-nums}
 .forecast{padding-top:8px;display:flex;flex-direction:column;min-height:0}
 .chart-wrap{flex:1;min-height:0;width:100%}
 .chart-wrap svg{display:block;width:100%;height:100%;overflow:visible}
@@ -25,8 +26,12 @@ body{display:flex;justify-content:center;align-items:flex-start;overflow:auto}
 .chart-wrap .metric{font-size:calc(11px * var(--type-scale,1));font-weight:700;fill:#000;letter-spacing:.01em}
 .chart-wrap .scale{font-size:calc(10px * var(--type-scale,1));font-weight:500;fill:#3f4449}
 .chart-wrap .axis{font-size:calc(9px * var(--type-scale,1));font-weight:600;fill:#343a3f}
+.chart-wrap .now-label{font-size:calc(6px * var(--type-scale,1));font-weight:700;fill:#343a3f;letter-spacing:.03em}
 .chart-wrap .midnight{stroke:#888;stroke-width:1.8px;vector-effect:non-scaling-stroke}
+.chart-wrap .now-marker{stroke:#555;stroke-width:1.1px;stroke-dasharray:3 3;vector-effect:non-scaling-stroke}
 .chart-wrap .temp-line,.chart-wrap .feels-line,.chart-wrap .series-line{fill:none;stroke-linecap:round;stroke-linejoin:round}
+.chart-wrap .actual-line{fill:none;stroke:#444a4f;stroke-width:2;stroke-dasharray:2 2;stroke-linecap:round;stroke-linejoin:round}
+.chart-wrap .actual-dot{fill:#fff;stroke:#24292d;stroke-width:.8;vector-effect:non-scaling-stroke}
 .chart-wrap .temp-line{stroke:#111518;stroke-width:3}
 .chart-wrap .feels-line{stroke:#4d5358;stroke-width:2.7;stroke-dasharray:5 3}
 .chart-wrap .series-line{stroke:#1d2226;stroke-width:2.5}
