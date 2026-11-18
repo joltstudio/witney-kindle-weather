@@ -32,7 +32,7 @@ cleanup() {
   rm -f "$FETCHPIDFILE"
   rm -f "$PIDFILE"
   if [ "$PILLOW_HIDDEN" -eq 1 ]; then
-    "$LIPC" com.lab126.pillow interrogatePillow '{"pillowId": "default_status_bar", "function": "nativeBridge.showMe();"}' 2>/dev/null || true
+    "$LIPC" com.lab126.pillow interrogatePillow '{"pillowId": "default_status_bar", "function": "nativeBridge.showMe();"}' >> "$LOG" 2>&1 || true
     log 'Kindle status bar restored'
     PILLOW_HIDDEN=0
   fi
@@ -71,13 +71,27 @@ log 'Weather display opened'
 
 # K4 firmware uses Pillow's soft hide API. Allow the delayed KUAL/window-manager
 # redraw to finish before the first framebuffer image is painted.
-if "$LIPC" com.lab126.pillow interrogatePillow '{"pillowId": "default_status_bar", "function": "nativeBridge.hideMe();"}' 2>/dev/null; then
+if "$LIPC" com.lab126.pillow interrogatePillow '{"pillowId": "default_status_bar", "function": "nativeBridge.hideMe();"}' >> "$LOG" 2>&1; then
   PILLOW_HIDDEN=1
   log 'Kindle status bar hidden'
-  sleep 3
 else
-  log 'Could not hide Kindle status bar; displaying forecast anyway'
+  log 'Could not hide Kindle status bar; Pillow LIPC call failed'
 fi
+sleep 3
+
+display_cached_image() {
+  if [ -s "$ROOT/weather.png" ]; then
+    if "$EIPS" -f -g "$ROOT/weather.png"; then
+      log 'Cached weather image displayed'
+    else
+      log 'Cached weather image could not be displayed'
+    fi
+  else
+    log 'No cached weather image available'
+  fi
+}
+
+display_cached_image
 
 fetch_and_display() {
   temp="$ROOT/weather.app-new.png"
@@ -109,7 +123,7 @@ fetch_and_display() {
     return 1
   fi
   # Reassert the K4 Pillow soft-hide before each framebuffer refresh.
-  if "$LIPC" com.lab126.pillow interrogatePillow '{"pillowId": "default_status_bar", "function": "nativeBridge.hideMe();"}' 2>/dev/null; then
+  if "$LIPC" com.lab126.pillow interrogatePillow '{"pillowId": "default_status_bar", "function": "nativeBridge.hideMe();"}' >> "$LOG" 2>&1; then
     PILLOW_HIDDEN=1
   else
     log 'Could not hide Kindle status bar; displaying forecast anyway'
