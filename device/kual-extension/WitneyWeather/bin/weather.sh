@@ -6,6 +6,8 @@ FETCHPIDFILE=/tmp/witney-weather-fetch.pid
 LOG="$ROOT/app.log"
 LIPC=/usr/bin/lipc-set-prop
 
+echo "$(date '+%Y-%m-%d %H:%M:%S') KUAL weather action invoked: ${1:-none}" >> "$LOG"
+
 daemon_is_running() {
   [ -r "$PIDFILE" ] || return 1
   pid=$(cat "$PIDFILE" 2>/dev/null)
