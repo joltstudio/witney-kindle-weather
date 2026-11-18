@@ -14,6 +14,10 @@ test('KUAL extension exposes open, refresh, and stop actions with valid scripts'
     'Refresh Forecast Now',
     'Exit Weather Display',
   ]);
+  assert.equal(menu.items[0].exitmenu, true);
+  assert.equal(menu.items[1].exitmenu, true);
+  assert.equal('refresh' in menu.items[0], false);
+  assert.equal('refresh' in menu.items[1], false);
   for (const item of menu.items) {
     assert.equal(item.action, './bin/weather.sh');
     assert.ok(existsSync(new URL(item.action.replace('./', ''), root)));

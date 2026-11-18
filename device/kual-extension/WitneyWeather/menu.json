@@ -4,15 +4,13 @@
       "name": "Open Weather Display",
       "action": "./bin/weather.sh",
       "params": "start",
-      "exitmenu": true,
-      "refresh": true
+      "exitmenu": true
     },
     {
       "name": "Refresh Forecast Now",
       "action": "./bin/weather.sh",
       "params": "refresh",
-      "exitmenu": true,
-      "refresh": true
+      "exitmenu": true
     },
     {
       "name": "Exit Weather Display",
