@@ -13,7 +13,7 @@ EIPS=/usr/sbin/eips
 INTERVAL=1800
 DOWNLOAD_TIMEOUT=25
 REFRESH_NOW=0
-PILLOW_DISABLED=0
+PILLOW_HIDDEN=0
 
 log() { echo "$(date '+%Y-%m-%d %H:%M:%S') $1" >> "$LOG"; }
 cleanup() {
@@ -31,10 +31,10 @@ cleanup() {
   fi
   rm -f "$FETCHPIDFILE"
   rm -f "$PIDFILE"
-  if [ "$PILLOW_DISABLED" -eq 1 ]; then
-    "$LIPC" com.lab126.pillow disableEnablePillow enable 2>/dev/null || true
+  if [ "$PILLOW_HIDDEN" -eq 1 ]; then
+    "$LIPC" com.lab126.pillow interrogatePillow '{"pillowId": "default_status_bar", "function": "nativeBridge.showMe();"}' 2>/dev/null || true
     log 'Kindle status bar restored'
-    PILLOW_DISABLED=0
+    PILLOW_HIDDEN=0
   fi
   "$LIPC" com.lab126.powerd preventScreenSaver 0 2>/dev/null || true
 }
@@ -69,6 +69,16 @@ trap 'REFRESH_NOW=1' USR1
 "$LIPC" com.lab126.wifid enable 1 2>/dev/null || true
 log 'Weather display opened'
 
+# K4 firmware uses Pillow's soft hide API. Allow the delayed KUAL/window-manager
+# redraw to finish before the first framebuffer image is painted.
+if "$LIPC" com.lab126.pillow interrogatePillow '{"pillowId": "default_status_bar", "function": "nativeBridge.hideMe();"}' 2>/dev/null; then
+  PILLOW_HIDDEN=1
+  log 'Kindle status bar hidden'
+  sleep 3
+else
+  log 'Could not hide Kindle status bar; displaying forecast anyway'
+fi
+
 fetch_and_display() {
   temp="$ROOT/weather.app-new.png"
   rm -f "$temp"
@@ -98,11 +108,9 @@ fetch_and_display() {
     log 'Weather fetch failed; last good screen retained'
     return 1
   fi
-  # The stock Pillow status bar can redraw over a full-screen eips image.
-  # Hide only that bar while this KUAL display is active; restore it on Exit.
-  if "$LIPC" com.lab126.pillow disableEnablePillow disable 2>/dev/null; then
-    PILLOW_DISABLED=1
-    log 'Kindle status bar hidden'
+  # Reassert the K4 Pillow soft-hide before each framebuffer refresh.
+  if "$LIPC" com.lab126.pillow interrogatePillow '{"pillowId": "default_status_bar", "function": "nativeBridge.hideMe();"}' 2>/dev/null; then
+    PILLOW_HIDDEN=1
   else
     log 'Could not hide Kindle status bar; displaying forecast anyway'
   fi
