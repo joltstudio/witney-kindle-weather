@@ -40,21 +40,25 @@ GitHub Actions fetches and validates Open-Meteo data, renders the exact 600×800
 
 The Kindle's bundled `wget` and `curl` are too old for modern HTTPS. This device path uses `xh`, a statically linked ARM HTTPS client bundled in the Kindle 4 Non-Touch release of [kindle-dash](https://github.com/pascalw/kindle-dash/releases/tag/v1.0.0-beta.4), whose maintainer reports K4NT testing. Firmware 4.1.3 has no CA bundle at the path `xh` expects, so the project bundles the current Mozilla CA roots from [curl's CA Extract](https://curl.se/docs/caextract.html) and passes that PEM file with `xh --verify`; TLS verification stays enabled. The CA bundle is MPL 2.0, with its license in `licenses/Mozilla-CA-MPL-2.0.txt`. A Mac-side staging script downloads the pinned `xh` release, verifies its archive and binary SHA-256 values, and copies the client, CA bundle and scripts to the Kindle USB volume. The Kindle then fetches the public PNG directly from GitHub Pages over HTTPS; no server, host, API key or paid service is needed. The scheduled Pages workflow continues to refresh the image while the Mac is off.
 
-The daemon uses `eips` to draw the PNG directly to the screen, then sleeps and wakes on an RTC alarm every 30 minutes. The e-ink screen retains the last image without browser chrome. If the fetch fails, the previous frame stays displayed and the reason is logged in `/mnt/us/kindle-weather/daemon.log`. `runme-install.sh` validates the staged files and configures the watchdog in normal-system cron; HTTPS is attempted by the daemon on normal boot, where Kindle services are available.
+The first device version used a system-cron watchdog and a background daemon that toggled Wi-Fi and suspended the Kindle. The user reported UI freezes, stale images and USB drops. Captured logs confirmed intermittent image fetch/display and DNS failures. A stop-only replacement was staged on the Kindle; the last available log predates confirmation that it ran. The replacement app is a KUAL extension: it starts only when opened, refreshes every 30 minutes while open, keeps Wi-Fi enabled, and restores the normal screen-saver setting when stopped. It still draws the grayscale PNG with `eips`, but avoids an automatic boot daemon and kernel suspend.
 
-The Kindle-dash release client is pinned to v1.0.0-beta.4 and verified by SHA-256 before staging. The preparation script also verifies the already downloaded K4 jailbreak archive (default path `/private/tmp/kindle-k4-jailbreak-1.8.N.zip`; override with `JAILBREAK_ARCHIVE=/path/to/archive`). With the Kindle mounted as `/Volumes/Kindle`, prepare the USB files by running:
+## App-like Kindle launcher
+
+The Kindle 4 uses the legacy KUAL-KDK Kindlet. Its required MobileRead Kindlet Kit (MKK) is separate from the jailbreak. A prepared K4 bundle is in `outputs/witney-weather-kual-install.zip`; it contains the K4-targeted MKK update package, `KUAL-KDK-1.0.azw2`, and the `Witney Weather` KUAL extension. Install only after verifying the stop-only watchdog has taken effect and the Kindle is stable. The first MKK installation is triggered from the Kindle's `Menu > Settings > Menu > Update Your Kindle`; KUAL should then appear in the library. Open KUAL > Witney Weather > Open Weather Display. Use Refresh Forecast Now or Exit Weather Display from KUAL. Firmware 4.1.3 compatibility is based on the KUAL maintainer's legacy KDK instructions and the K4 package target; the app has not yet been exercised on the device.
+
+The Kindle-dash release client is pinned to v1.0.0-beta.4 and verified by SHA-256 before staging. The preparation script also verifies the already downloaded K4 jailbreak archive (default path `/private/tmp/kindle-k4-jailbreak-1.8.N.zip`; override with `JAILBREAK_ARCHIVE=/path/to/archive`). That script is for the initial jailbreak setup only; do not run it again on this already-jailbroken device. With the Kindle mounted as `/Volumes/Kindle`, it can be run by:
 
 ```sh
 sh device/prepare-kindle-usb.sh
 ```
 
-This copies the HTTPS client, CA bundle, config and scripts, plus the K4 jailbreak's Diagnostics trigger files and one-shot `runme.sh` installer. It does not execute the installer or alter Kindle system files. On an already jailbroken device, the trigger files are not needed for routine updates; stage the updated daemon and CA bundle through USB storage, safely eject, then let normal-system cron retry the image fetch. Do not repeat the Diagnostics flow to update weather files. The Kindle-specific TLS fetch and display must be verified from `daemon.log` and the on-screen result before considering installation complete.
+This copies the HTTPS client, CA bundle, config and scripts, plus the K4 jailbreak's Diagnostics trigger files and one-shot `runme.sh` installer. It does not execute the installer or alter Kindle system files. Do not use this initial-setup script to install the KUAL app. The KUAL package is built separately with `sh scripts/build-kual-install.sh`; follow its included README only after the current stop-only watchdog state has been checked. The Kindle-specific fetch and display must be verified on the device before considering installation complete.
 
 The GitHub Pages preview is [https://joltstudio.github.io/witney-kindle-weather/kindle.html](https://joltstudio.github.io/witney-kindle-weather/kindle.html). It remains useful on modern browsers; it is not the device renderer.
 
 ## Kindle compatibility status
 
-The user reports a D01100 Kindle 4 Non-Touch on firmware **4.1.3**. MobileRead's K4NT page lists 4.0.0–4.1.4, and the matching K4 package was used. Jailbreak completion was verified. The user now reports the weather image appears on the Kindle but is stretched, and the Kindle freezes when opening Settings. USB and both known SSH paths are currently unavailable, so logs cannot be retrieved. The likely display cause is K4 `eips` stretching RGB PNGs; the renderer now converts browser RGB screenshots to 8-bit grayscale before publishing. This grayscale fix is local and not deployed yet.
+The target is a jailbroken D01100 Kindle 4 Non-Touch, firmware **4.1.3**. Jailbreak completion and the existing USBNetwork extension are verified. GitHub Pages is public and refreshes the image every 30 minutes. The device log captured successful image displays alongside DNS/network failures. A read-only backup of the user partition was made, and the emergency watchdog replacement is on the Kindle; whether cron stopped the daemon is not confirmed. A local KUAL extension and K4 install bundle pass local checks, but MKK/KUAL installation, on-device launch/exit, refreshed display and stability remain unverified. Keep the device backed up and do not use factory reset or filesystem repair while this remains unresolved.
 
 ## Reference pages
 
@@ -73,6 +77,9 @@ The user reports a D01100 Kindle 4 Non-Touch on firmware **4.1.3**. MobileRead's
 - Mozilla Public License 2.0: https://www.mozilla.org/en-US/MPL/2.0/
 - MobileRead K4NT-specific Picture Viewer steps: https://www.mobileread.com/forums/showthread.php?nojs=1&t=152104
 - Kindle 4 User Guide (USB transfer): https://kindle.s3.amazonaws.com/Kindle_User%27s_Guide_4th_Edition.pdf
+- MobileRead Kindlet Kit (MKK): https://www.mobileread.com/forums/showthread.php?t=233932
+- KUAL launcher and legacy Kindlet instructions: https://www.mobileread.com/forums/showthread.php?t=203326
+- KUAL K4/MRPI guide: https://github.com/KindleModding/kindlemodding.github.io/blob/main/content/jailbreaking/Legacy/post-jailbreak/installing-kual-mrpi/__index.md
 - Inter font and SIL OFL licence: https://github.com/rsms/inter/blob/master/LICENSE.txt
 - GitHub Pages custom workflows: https://docs.github.com/en/pages/getting-started-with-github-pages/using-custom-workflows-with-github-pages
 - GitHub Actions billing: https://docs.github.com/en/billing/concepts/product-billing/github-actions
