@@ -7,7 +7,8 @@ document.documentElement.style.setProperty('--page-height',`${CONFIG.display.hei
 document.documentElement.style.setProperty('--page-gutter',`${CONFIG.spacing.page}px`);
 document.documentElement.style.setProperty('--page-top',`${CONFIG.spacing.top}px`);
 document.documentElement.style.setProperty('--page-bottom',`${CONFIG.spacing.bottom}px`);
-document.documentElement.style.setProperty('--base-font',`${CONFIG.typography.size}px`);
+document.documentElement.style.setProperty('--current-column-width',`${CONFIG.spacing.currentColumn}px`);
+document.documentElement.style.setProperty('--type-scale',String(CONFIG.typography.scale));
 document.documentElement.style.setProperty('--weather-font',`"${CONFIG.typography.body}",Arial,sans-serif`);
 const fitPreview=()=>document.documentElement.style.setProperty('--preview-scale',String(Math.min(1,innerWidth/CONFIG.display.width,innerHeight/CONFIG.display.height)));
 fitPreview();window.addEventListener('resize',fitPreview);
@@ -18,8 +19,9 @@ function render(payload,fetchedAt,{stale=false,error=false,demo=false,nowMs=Date
   const hours=selectNext48(payload,nowMs),summary=summarize48(hours),current=payload.current;
   $('current-temp').innerHTML=`${fmt(current.temperature_2m,0)}<sup>${CONFIG.units.temperature}</sup>`;
   $('current-feels').textContent=`${fmt(current.apparent_temperature,0)}${CONFIG.units.temperature}`;
+  $('current-humidity').textContent=`${fmt(current.relative_humidity_2m)}${CONFIG.units.humidity}`;
+  $('current-wind').textContent=`${fmt(current.wind_speed_10m)}${CONFIG.units.wind}`;
   $('condition-text').textContent=weatherText(current.weather_code);
-  $('current-detail').textContent=`Humidity ${fmt(current.relative_humidity_2m)}${CONFIG.units.humidity}  ·  Wind ${fmt(current.wind_speed_10m)} ${CONFIG.units.wind}`;
   const status=$('status');status.dataset.state=stale?'stale':error?'error':demo?'demo':'live';
   $('status-text').textContent=stale?'STALE DATA':error?'DATA UNAVAILABLE':'';
   $('updated').textContent=`Updated ${new Intl.DateTimeFormat('en-GB',{timeZone:CONFIG.location.timezone,hour:'2-digit',minute:'2-digit',day:'2-digit',month:'short',hourCycle:'h23'}).format(new Date(fetchedAt))}${stale?' · stale':''}`;
@@ -28,34 +30,33 @@ function render(payload,fetchedAt,{stale=false,error=false,demo=false,nowMs=Date
 }
 
 function chartSvg(hours,summary){
-  const W=CONFIG.chart.width,L=CONFIG.chart.labelWidth,P=W-L,top=43,rowH=CONFIG.chart.rowHeight,gap=CONFIG.spacing.rowGap,H=top+5*(rowH+gap)+24,step=P/48;
+  const W=CONFIG.chart.width,L=CONFIG.chart.labelWidth,P=W-L,top=52,rowH=CONFIG.chart.rowHeight,gap=CONFIG.spacing.rowGap,step=P/48;
   const tempValues=hours.flatMap(h=>[h.temp,h.feels]).filter(Number.isFinite);
   const tempMin=tempValues.length?Math.floor(Math.min(...tempValues)-1):-10;
   const tempMax=tempValues.length?Math.ceil(Math.max(...tempValues)+1):10;
   const ranges={
-    temp:{key:'temp',title:`TEMP + FEELS · ${CONFIG.units.temperature}`,detail:`↑${fmt(summary.high,0)}° · ↓${fmt(summary.low,0)}°`,detail2:`↑${fmt(summary.feelsHigh,0)}° · ↓${fmt(summary.feelsLow,0)}°`,min:tempMin,max:tempMax},
-    rain:{key:'rain',title:`RAIN · ${CONFIG.units.precipitation}/h`,detail:`${fmt(summary.rainPeak,1)} ${CONFIG.units.precipitation}/h MAX`,min:0,max:Math.max(.5,Math.ceil(Math.max(...hours.map(h=>h.rain??0))*2)/2)},
-    humidity:{key:'humidity',title:`HUMIDITY · ${CONFIG.units.humidity}`,detail:`${fmt(summary.humidity.low)}–${fmt(summary.humidity.high)}${CONFIG.units.humidity}`,min:0,max:100},
-    wind:{key:'wind',title:`WIND · ${CONFIG.units.wind}`,detail:`${fmt(summary.wind.low)}–${fmt(summary.wind.high)} ${CONFIG.units.wind}`,min:0,max:Math.max(10,Math.ceil(Math.max(...hours.map(h=>h.wind??0))/5)*5)},
-    sun:{key:'sun',title:'SUNSHINE · min/h',detail:`${fmt(summary.sunshine.low)}–${fmt(summary.sunshine.high)} min/h`,min:0,max:60}
+    temp:{key:'temp',title:'TEMP + FEELS',detail:`↑${fmt(summary.high,0)}° · ↓${fmt(summary.low,0)}°`,detail2:`↑${fmt(summary.feelsHigh,0)}° · ↓${fmt(summary.feelsLow,0)}°`,min:tempMin,max:tempMax},
+    rain:{key:'rain',title:'RAIN',detail:`${fmt(summary.rainPeak,1)} ${CONFIG.units.precipitation}/h MAX`,min:0,max:Math.max(.5,Math.ceil(Math.max(...hours.map(h=>h.rain??0))*2)/2)},
+    sun:{key:'sun',title:'SUNSHINE',detail:`${fmt(summary.sunshine.low)}–${fmt(summary.sunshine.high)} min/h`,min:0,max:60},
+    wind:{key:'wind',title:'WIND',detail:`${fmt(summary.wind.low)}–${fmt(summary.wind.high)} ${CONFIG.units.wind}`,min:0,max:Math.max(10,Math.ceil(Math.max(...hours.map(h=>h.wind??0))/5)*5)}
   };
-  const svg=[`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="48 hourly values with air temperature and feels-like, rainfall, humidity, wind and sunshine. Air and feels-like high and low points are marked; peak hourly rainfall is noted.">`];
+  const rows=Object.values(ranges),H=top+rows.length*(rowH+gap)+24;
+  const svg=[`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="48 hourly values with air temperature and feels-like, rainfall, sunshine and wind. Air and feels-like high and low points are marked; peak hourly rainfall is noted.">`];
   const boundaries=chartBoundaries(hours),lanes=[];
   for(let i=0;i<boundaries.length;i++){
-    const start=boundaries[i],end=boundaries[i+1]??48,left=L+start*step,right=L+end*step,mid=(left+right)/2,label=dateLabel(hours[start].time),textWidth=label.length*6.4;
+    const start=boundaries[i],end=boundaries[i+1]??48,left=L+start*step,right=L+end*step,mid=(left+right)/2,label=dateLabel(hours[start].time),textWidth=label.length*5.8*CONFIG.typography.scale;
     const x=Math.max(L+textWidth/2,Math.min(L+P-textWidth/2,mid));
     let lane=0;while(lanes[lane]!==undefined&&lanes[lane]>x-textWidth/2-4)lane++;
     lanes[lane]=x+textWidth/2;
-    svg.push(`<text x="${x}" y="${13+lane*14}" text-anchor="middle" class="date">${escapeSvg(label)}</text>`);
+    svg.push(`<text x="${x}" y="${19+lane*18}" text-anchor="middle" class="date">${escapeSvg(label)}</text>`);
   }
   for(const i of boundaries.filter(i=>i>0)){
-    const x=L+i*step;svg.push(`<line x1="${x}" x2="${x}" y1="34" y2="${H-22}" class="midnight"/>`);
+    const x=L+i*step;svg.push(`<line x1="${x}" x2="${x}" y1="43" y2="${H-22}" class="midnight"/>`);
   }
-  const rows=Object.values(ranges);
   rows.forEach((series,r)=>{
     const y=top+r*(rowH+gap),bottom=y+rowH;
-    svg.push(`<text x="0" y="${y+22}" class="metric">${escapeSvg(series.title)}</text><text x="0" y="${y+42}" class="scale">${escapeSvg(series.detail)}</text>`);
-    if(series.detail2)svg.push(`<text x="0" y="${y+57}" class="scale">${escapeSvg(series.detail2)}</text>`);
+    svg.push(`<text x="0" y="${y+21}" class="metric">${escapeSvg(series.title)}</text><text x="0" y="${y+42}" class="scale">${escapeSvg(series.detail)}</text>`);
+    if(series.detail2)svg.push(`<text x="0" y="${y+61}" class="scale">${escapeSvg(series.detail2)}</text>`);
     const py=v=>bottom-6-((Math.max(series.min,Math.min(series.max,v))-series.min)/(series.max-series.min||1))*(rowH-14);
     if(series.key==='temp'){
       for(const [key,cls] of [['temp','temp-line'],['feels','feels-line']]){

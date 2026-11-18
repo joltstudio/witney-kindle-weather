@@ -4,7 +4,7 @@
 - Non-touch Kindle D01100 target, portrait 600×800; no navigation or controls. Current conditions are separated from the rolling 48-hour hourly forecast.
 - Location 51.783, -1.486; Europe/London. Open-Meteo provides all requested hourly variables. Request Unix timestamps and format with the IANA timezone so DST transitions and duplicated hours are handled correctly.
 - User removed jacket and umbrella advice. The current temperature and condition lead the page; the chart below carries the 48-hour forecast, high/low air and feels-like markers, and peak hourly rainfall.
-- No horizontal rules; local midnight dividers are pale 1px vertical strokes. Primary type is bundled Inter. No legend row or “Local time · 24 h” note.
+- No horizontal rules; local midnight dividers are 1.8px medium-dark vertical strokes. Primary type is bundled Inter at a 1.45× scale. No location heading, legend row, or “Local time · 24 h” note.
 - Refresh every 30 minutes; cache last valid response in localStorage. On fetch failure, keep the cache and label it stale; without cache, show unavailable status.
 - Static ES module app with bundled Inter weights (SIL OFL), no runtime packages. Live mode is default; fixture mode is deterministic.
 - Hosting: public source at `https://github.com/joltstudio/witney-kindle-weather` and public GitHub Pages at `https://joltstudio.github.io/witney-kindle-weather/kindle.html`. GitHub Actions refreshes the forecast image every 30 minutes; the Kindle legacy page refreshes at the same cadence. GitHub Free supports Pages for public repositories.
@@ -15,7 +15,7 @@
 - `device/kindle-weather-daemon.sh`, `device/kindle-weather-watchdog.sh`, `device/runme-install.sh`: full-screen eips refresh loop, watchdog, and K4 jailbreak `runme.sh` hook. The daemon uses pinned static ARM `xh` from `kindle-dash` to fetch the Pages PNG directly over HTTPS.
 - `device/prepare-kindle-usb.sh`: verifies the `kindle-dash` release and the original K4 jailbreak archive by SHA-256, then stages the client, config, scripts, and diagnostic trigger files on USB without executing the installer.
 - `tests/weather.test.js`: built-in Node tests for DST, date/hour selection, units, data validation, air/feels high-low and rain peak summaries.
-- `scripts/render.mjs`: Chrome headless screenshot at configured size; verifies PNG dimensions.
+- `scripts/render.mjs`: Chrome headless screenshot at configured size; verifies grayscale PNG dimensions and accepts `--output=PATH` for a local review render.
 - `licenses/OFL-Inter.txt`, `assets/fonts/Inter-*.otf`: bundled font and licence.
 - `outputs/witney-weather-600x800.png`: deterministic fixture PNG, 600×800.
 - `outputs/witney-weather-live-600x800.png`: live 600×800 snapshot.
@@ -25,7 +25,7 @@
 - Preview: `python3 -m http.server 4173 --bind 127.0.0.1`; open `http://127.0.0.1:4173/?mode=live`.
 - Fixture preview: `http://127.0.0.1:4173/?mode=fixture`.
 - Tests: `npm test` (or `node --test tests/weather.test.js`).
-- Fixture PNG: `node scripts/render.mjs` (requires Google Chrome at `/Applications/Google Chrome.app/Contents/MacOS/Google Chrome`).
+- Fixture PNG: `node scripts/render.mjs --output=outputs/witney-weather-local-preview.png` (requires Google Chrome at `/Applications/Google Chrome.app/Contents/MacOS/Google Chrome`).
 - Live snapshot PNG: `node scripts/fetch-weather.mjs` then with server running `node scripts/render.mjs --snapshot`; direct browser fetch alternative `node scripts/render.mjs --live`.
 - Kindle USB staging (only after install approval): `sh device/prepare-kindle-usb.sh` (defaults to `/Volumes/Kindle` and the already downloaded verified jailbreak archive; supports `KINDLE_VOLUME`, `JAILBREAK_ARCHIVE`, and `KINDLE_DASH_ARCHIVE` overrides).
 - Validation: `npm test`; `sh -n device/kindle-weather-daemon.sh device/kindle-weather-watchdog.sh device/runme-install.sh device/prepare-kindle-usb.sh`; `git diff --check`.
@@ -167,3 +167,16 @@
 - Source fix committed as `b4a722d` (`Fix KUAL weather display redraw`) and GitHub Desktop reports `push complete` to public `origin/main`. `npm test` passed 9/9 and `git diff --check` passed. After these checks, updated the restart log for this push.
 - Device update completed after user reconnected: saved the previous menu at ignored `work/device-backup-2026-11-18-overlay-fix/extensions/WitneyWeather/menu.json`, replaced only `/extensions/WitneyWeather/menu.json`, parsed the installed JSON, and verified `cmp` plus matching SHA-256 `b9548324bbda8075757cccf62d5332657bdb70f58b5ebd4e02dc2fedc5036c36`. Safely ejected through Finder. No other on-device files changed.
 - Next: user opens KUAL > Witney Weather > Open Weather Display once and reports whether the KUAL overlay stays away. Do not repeat any jailbreak, firmware, or keystore package. The screenshot's `Updated 18 Nov, 04:21` footer also indicates the fetched published PNG itself may be stale; check Pages refresh separately after the KUAL overlay is fixed.
+
+## Larger-type local preview — 2026-11-18
+- Removed the visible “Witney, UK” heading and condensed the top masthead. Scaled current conditions, chart labels, values and footer typography by 1.45× using bundled Inter; date and time labels are slightly smaller. Moved “Feels like”, humidity and wind into one line, with bold values and no space before mph. Removed units from the TEMP + FEELS, RAIN, HUMIDITY, WIND and SUNSHINE headlines while retaining units in their readings. Expanded chart row height/gaps to use the room released by the condensed current-weather block. Headlines and bars are pure black; midnight dividers remain 1.8px medium-dark strokes.
+- Local fixture preview: `outputs/witney-weather-local-preview.png` (600×800, 8-bit grayscale). `node scripts/render.mjs --output=outputs/witney-weather-local-preview.png` renders it. Visually inspected: the whole page and footer fit without clipping; the one-line current details and expanded charts fit. Fixture values/date are illustrative, not live data.
+- `npm test`: 9 passed; `git diff --check` passed. The user has now approved this design for deployment.
+- Follow-up: placed the Feels like / Humidity / Wind line directly below the condition text with zero extra top margin, kept all values bold and `8mph` compact, lightened midnight lines to `#888`, and reduced footer type. Removed the humidity forecast graph row and ordered the remaining rows TEMP + FEELS, RAIN, SUNSHINE, WIND. Increased chart rows to 107px with 14px gaps so plots use more vertical area. Re-rendered the local PNG and visually confirmed the tighter grouping, taller graphs and 600×800 fit; tests remain 9/9. Still not deployed.
+- Detail-line refinement: replaced flex gaps with literal single-space bullets, keeping labels regular and readings bold. Updated local preview; `npm test` passes 9/9 and `git diff --check` passes.
+
+## User-approved design deployment — 2026-11-18
+- User approved publishing the current local design. The changed app uses one-line current details, four taller rows (TEMP + FEELS, RAIN, SUNSHINE, WIND), no visible location heading, larger Inter typography, and stronger graph contrast. Local 600×800 grayscale preview is visually verified and 9/9 tests pass.
+- Corrected README's stale device status: Kindle firmware is 4.1.4; KUAL now launches; app log confirms a successful open and PNG fetch. Removed old advice to rerun the KUAL/certificate installers.
+- User reports a top bar has reappeared. The previous KUAL menu text redraw fix is installed; the remaining top strip is likely the Kindle system status bar, not KUAL. K4 legacy display references document framework redraws over full-screen output when Wi-Fi/battery state changes. No firmware/system changes are included in this design deploy; do not claim the status bar was hidden.
+- Next: commit/push these source changes, verify the GitHub Pages build/deploy workflow succeeds, and report the published image update time plus device polling interval. The app fetches on open and every 30 minutes while left open, so reopening after Pages deployment fetches immediately; otherwise it may take up to 30 minutes.

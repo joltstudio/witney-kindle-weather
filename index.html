@@ -10,15 +10,20 @@
 <body>
   <main id="display" aria-label="Witney weather display">
     <header class="masthead">
-      <h1>Witney<span>, UK</span></h1>
       <div class="status" id="status"><span id="status-text"></span></div>
     </header>
     <section class="now" aria-label="Current weather">
       <div class="now-grid">
         <div class="temperature" id="current-temp">—<sup>°C</sup></div>
-        <div class="condition"><div id="condition-text">Waiting for weather</div><div class="feels">Feels like <b id="current-feels">—°C</b></div></div>
+        <div class="condition">
+          <div id="condition-text">Waiting for weather</div>
+          <div class="current-detail" id="current-detail">
+            <span>Feels like <b id="current-feels">—°C</b></span><span class="separator" aria-hidden="true"> • </span>
+            <span>Humidity <b id="current-humidity">—%</b></span><span class="separator" aria-hidden="true"> • </span>
+            <span>Wind <b id="current-wind">—mph</b></span>
+          </div>
+        </div>
       </div>
-      <div class="current-detail" id="current-detail">Humidity —% <i></i> Wind — mph</div>
     </section>
     <section class="forecast" aria-label="Hourly weather charts">
       <div id="chart-wrap" class="chart-wrap"><div class="empty">Weather chart unavailable</div></div>
