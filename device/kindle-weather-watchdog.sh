@@ -1,40 +1,49 @@
 #!/bin/sh
-# Started by root cron once per minute; recovers the display daemon after a crash.
-ROOT=/mnt/us/kindle-weather
-PIDFILE=/tmp/kindle-weather.pid
-RESTART_MARKER="$ROOT/restart-daemon-once"
+# Existing once-per-minute root cron entry starts the KUAL app after boot and
+# recovers it after crashes. Home/Exit writes a /tmp marker so cron does not
+# immediately reopen the display; /tmp is cleared by the next reboot.
+APP=${WEATHER_APP:-/mnt/us/extensions/WitneyWeather/bin/weather.sh}
+APP_PIDFILE=${WEATHER_APP_PIDFILE:-/tmp/witney-weather.pid}
+EXIT_MARKER=${WEATHER_EXIT_MARKER:-/tmp/witney-weather-user-exit}
+LEGACY_PIDFILE=${WEATHER_LEGACY_PIDFILE:-/tmp/kindle-weather.pid}
+LOG=${WEATHER_LOG:-/mnt/us/kindle-weather/app.log}
 
-# A one-shot marker lets an update replace the daemon without rebooting the
-# Kindle. Only stop the recorded PID if its command line is this daemon.
-if [ -f "$RESTART_MARKER" ]; then
-  pid=$(cat "$PIDFILE" 2>/dev/null)
-  case "$pid" in
-    ''|*[!0-9]*) ;;
-    *)
-      if kill -0 "$pid" 2>/dev/null; then
-        command_line=$(tr '\000' ' ' < "/proc/$pid/cmdline" 2>/dev/null || true)
-        case "$command_line" in
-          *kindle-weather-daemon.sh*)
-            kill "$pid" 2>/dev/null || true
-            tries=0
-            while kill -0 "$pid" 2>/dev/null && [ "$tries" -lt 5 ]; do
-              sleep 1
-              tries=$((tries + 1))
-            done
-            if kill -0 "$pid" 2>/dev/null; then
-              echo "$(date '+%Y-%m-%d %H:%M:%S') Watchdog could not stop daemon PID $pid; leaving it alone" >> "$ROOT/daemon.log"
-              exit 1
-            fi
-            ;;
-        esac
-      fi
-      ;;
-  esac
-  rm -f "$PIDFILE" "$RESTART_MARKER"
-fi
+[ -x "$APP" ] || exit 0
+[ -e "$EXIT_MARKER" ] && exit 0
 
-if [ -f "$PIDFILE" ]; then
-  pid=$(cat "$PIDFILE" 2>/dev/null)
-  if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null; then exit 0; fi
+# Never run the previous daemon alongside the KUAL app. The old process must
+# be stopped cleanly before switching the watchdog to this launcher.
+legacy_pid=$(cat "$LEGACY_PIDFILE" 2>/dev/null)
+case "$legacy_pid" in
+  ''|*[!0-9]*) ;;
+  *)
+    if kill -0 "$legacy_pid" 2>/dev/null; then
+      legacy_cmd=$(tr '\000' ' ' < "/proc/$legacy_pid/cmdline" 2>/dev/null) || legacy_cmd=
+      case "$legacy_cmd" in
+        *kindle-weather-daemon.sh*)
+          echo "$(date '+%Y-%m-%d %H:%M:%S') Legacy weather daemon is still running; refusing a competing launch" >> "$LOG"
+          exit 0
+          ;;
+      esac
+    fi
+    ;;
+esac
+
+app_pid=$(cat "$APP_PIDFILE" 2>/dev/null)
+case "$app_pid" in
+  ''|*[!0-9]*) ;;
+  *)
+    if kill -0 "$app_pid" 2>/dev/null; then
+      app_cmd=$(tr '\000' ' ' < "/proc/$app_pid/cmdline" 2>/dev/null) || app_cmd=
+      case "$app_cmd" in *weather-loop.sh*) exit 0 ;; esac
+    fi
+    ;;
+esac
+
+if [ -x /usr/bin/lipc-set-prop ]; then
+  /usr/bin/lipc-set-prop com.lab126.wifid enable 1 2>/dev/null || true
+  /usr/bin/lipc-set-prop com.lab126.powerd preventScreenSaver 0 2>/dev/null || true
 fi
-/bin/sh "$ROOT/kindle-weather-daemon.sh" >> "$ROOT/daemon.log" 2>&1 &
+killall -CONT cvm 2>/dev/null || true
+echo "$(date '+%Y-%m-%d %H:%M:%S') Boot watchdog starting Witney Weather" >> "$LOG"
+/bin/sh "$APP" autostart >> "$LOG" 2>&1 </dev/null &

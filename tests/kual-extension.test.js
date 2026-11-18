@@ -25,7 +25,7 @@ test('KUAL extension exposes open, refresh, and stop actions with valid scripts'
   assert.match(read('config.xml'), /<menu type="json" dynamic="true">menu\.json<\/menu>/);
 });
 
-test('weather loop is session launched, refreshes on demand and periodically, and retains the last good image', () => {
+test('weather loop refreshes on demand, retains cache, and sleeps with Wi-Fi off between updates', () => {
   const menu = read('menu.json');
   const launcher = read('bin/weather.sh');
   const loop = read('bin/weather-loop.sh');
@@ -34,6 +34,11 @@ test('weather loop is session launched, refreshes on demand and periodically, an
   assert.match(loop, /trap 'REFRESH_NOW=1' USR1/);
   assert.match(launcher, /kill -USR1/);
   assert.match(loop, /last good screen retained/);
-  assert.doesNotMatch(loop, /echo mem > \/sys\/power\/state/);
-  assert.doesNotMatch(loop, /wifid enable 0/);
+  assert.match(loop, /echo mem > "\$power_state"/);
+  assert.match(loop, /wifid enable 0/);
+  assert.match(loop, /rtc1\/wakealarm/);
+  assert.match(loop, /WEATHER_REFRESH_SECONDS/);
+  assert.doesNotMatch(loop, /sleep 10/);
+  assert.match(launcher, /autostart\)/);
+  assert.match(launcher, /witney-weather-user-exit/);
 });

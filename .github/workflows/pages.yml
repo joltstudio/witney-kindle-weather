@@ -7,7 +7,9 @@ on:
       - README.md
       - PROJECT.md
   schedule:
-    - cron: '19,49 * * * *'
+    # The second slot in each half-hour is a recovery attempt if GitHub drops
+    # the first scheduled event. A cache-age gate prevents extra API requests.
+    - cron: '19,29,49,59 * * * *'
   workflow_dispatch:
 
 permissions:
@@ -36,8 +38,12 @@ jobs:
           path: outputs/weather-snapshot.json
           key: weather-snapshot-${{ github.run_id }}
           restore-keys: weather-snapshot-
+      - name: Check whether a scheduled forecast refresh is due
+        id: refresh
+        run: node scripts/refresh-policy.mjs
       - name: Fetch and validate latest forecast
         id: forecast
+        if: steps.refresh.outputs.due == 'true'
         continue-on-error: true
         run: node scripts/fetch-weather.mjs
       - uses: actions/cache/save@v4
@@ -46,7 +52,7 @@ jobs:
           path: outputs/weather-snapshot.json
           key: weather-snapshot-${{ github.run_id }}
       - name: Serve and render the 600×800 screen
-        if: steps.forecast.outcome == 'success'
+        if: steps.forecast.outcome == 'success' || steps.forecast.outcome == 'skipped'
         env:
           CHROME_BIN: ${{ steps.chrome.outputs.chrome-path }}
           CHROME_NO_SANDBOX: '1'

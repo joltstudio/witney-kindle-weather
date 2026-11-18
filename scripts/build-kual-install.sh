@@ -42,6 +42,7 @@ unzip -p "$DEV_CERTS_ARCHIVE" Update_mkk-20250419-k4-ALL_keystore-install.bin \
 tar -xOf "$KUAL_ARCHIVE" KUAL-KDK-1.0.azw2 \
   > "$STAGE_DIR/documents/KUAL-KDK-1.0.azw2"
 cp -R "$PROJECT_ROOT/device/kual-extension/WitneyWeather" "$STAGE_DIR/extensions/"
+cp "$PROJECT_ROOT/device/kindle-weather-watchdog.sh" "$STAGE_DIR/kindle-weather-watchdog.sh"
 
 cat > "$STAGE_DIR/README-INSTALL.txt" <<'EOF'
 Witney Weather for Kindle 4 Non-Touch (D01100)
@@ -52,9 +53,9 @@ developer-keystore update, KUAL-KDK-1.0.azw2, and the Witney Weather extension.
 
 The device must already contain /mnt/us/kindle-weather/config, xh, and cacert.pem
 from the earlier weather setup. The extension fetches the configured live
-600x800 grayscale PNG. It starts only when opened, keeps Wi-Fi enabled, refreshes
-every 30 minutes, retains the last good image on failure, and restores the normal
-screen-saver setting when stopped.
+600x800 grayscale PNG, retains the last good image on failure, turns Wi-Fi off
+between updates, and uses the K4 RTC wake alarm plus suspend-to-RAM when available.
+The default refresh interval is 30 minutes.
 
 Install sequence
 ----------------
@@ -71,7 +72,17 @@ Install sequence
 5. Ensure KUAL-KDK-1.0.azw2 is in documents and WitneyWeather is in extensions.
    Restart and tap KUAL in the library.
 6. In KUAL > Witney Weather, choose Open Weather Display. Use Refresh Forecast
-   Now or Exit Weather Display from KUAL.
+   Now or Exit Weather Display from KUAL. The physical Home button exits to the
+   library and suppresses auto-launch until the next reboot.
+7. To enable boot launch, keep the existing once-per-minute root cron entry and
+   replace /mnt/us/kindle-weather/kindle-weather-watchdog.sh with the matching
+   kindle-weather-watchdog.sh from the project. Back up the current watchdog
+   first. The watchdog starts the KUAL app after boot and after a crash, but
+   respects the Home/Exit marker until reboot.
+
+The low-power suspend and unattended boot paths must be verified on the actual
+device before relying on them. If the RTC wake alarm is absent, the app falls
+back to a sleeping shell timer and updates continue only while that process runs.
 
 MKK source: https://www.mobileread.com/forums/showthread.php?t=233932
 KUAL source: https://www.mobileread.com/forums/showthread.php?t=203326
@@ -91,7 +102,7 @@ EOF
 
 (
   cd "$STAGE_DIR"
-  zip -r -FS "$ZIP_PATH" Update_mkk-20141129-k4-ALL_install.bin Update_mkk-20250419-k4-ALL_keystore-install.bin documents/KUAL-KDK-1.0.azw2 extensions/WitneyWeather README-INSTALL.txt
+  zip -r -FS "$ZIP_PATH" Update_mkk-20141129-k4-ALL_install.bin Update_mkk-20250419-k4-ALL_keystore-install.bin documents/KUAL-KDK-1.0.azw2 extensions/WitneyWeather kindle-weather-watchdog.sh README-INSTALL.txt
 )
 unzip -t "$ZIP_PATH"
 echo "Built $ZIP_PATH"

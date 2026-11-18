@@ -5,6 +5,7 @@ PIDFILE=/tmp/witney-weather.pid
 FETCHPIDFILE=/tmp/witney-weather-fetch.pid
 LOG="$ROOT/app.log"
 LIPC=/usr/bin/lipc-set-prop
+EXIT_MARKER=/tmp/witney-weather-user-exit
 
 echo "$(date '+%Y-%m-%d %H:%M:%S') KUAL weather action invoked: ${1:-none}" >> "$LOG"
 
@@ -19,7 +20,10 @@ daemon_is_running() {
 }
 
 start_loop() {
-  rm -f "$PIDFILE"
+  launch_mode=${1:-manual}
+  if [ "$launch_mode" != autostart ]; then
+    rm -f "$EXIT_MARKER"
+  fi
   trap '' HUP
   /bin/sh "$APP/bin/weather-loop.sh" >> "$LOG" 2>&1 </dev/null &
   sleep 1
@@ -31,21 +35,30 @@ start_loop() {
 case "${1:-}" in
   start)
     if daemon_is_running; then
+      rm -f "$EXIT_MARKER"
       kill -USR1 "$pid" 2>/dev/null || true
       exit 0
     fi
-    start_loop
+    start_loop manual
     exit $?
     ;;
   refresh)
     if daemon_is_running; then
+      rm -f "$EXIT_MARKER"
       kill -USR1 "$pid" 2>/dev/null || true
       exit 0
     fi
-    start_loop
+    start_loop manual
+    exit $?
+    ;;
+  autostart)
+    [ -e "$EXIT_MARKER" ] && exit 0
+    if daemon_is_running; then exit 0; fi
+    start_loop autostart
     exit $?
     ;;
   stop)
+    : > "$EXIT_MARKER"
     if daemon_is_running; then
       if [ -r "$FETCHPIDFILE" ]; then
         fetch_pid=$(cat "$FETCHPIDFILE" 2>/dev/null)

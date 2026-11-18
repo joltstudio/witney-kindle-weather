@@ -1,2 +1,4 @@
 # Public PNG from this project's scheduled GitHub Pages deployment.
 IMAGE_URL='https://joltstudio.github.io/witney-kindle-weather/outputs/witney-weather-live-600x800.png'
+WEATHER_REFRESH_SECONDS=1800
+WEATHER_WIFI_SETTLE_SECONDS=8
