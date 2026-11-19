@@ -10,7 +10,7 @@ test('push and manual publishes always fetch current data', () => {
   assert.equal(shouldRefreshSnapshot(fresh, 'workflow_dispatch', now), true);
 });
 
-test('scheduled backup slots skip a recent snapshot and refresh at 25 minutes', () => {
+test('five-minute schedule skips a recent snapshot and refreshes at four minutes', () => {
   assert.equal(shouldRefreshSnapshot({ fetchedAt: now - REFRESH_AFTER_MS + 1 }, 'schedule', now), false);
   assert.equal(shouldRefreshSnapshot({ fetchedAt: now - REFRESH_AFTER_MS }, 'schedule', now), true);
   assert.equal(shouldRefreshSnapshot({ fetchedAt: now - REFRESH_AFTER_MS - 1 }, 'schedule', now), true);
