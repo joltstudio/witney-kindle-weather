@@ -5,7 +5,16 @@ import { fetchStationData } from '../observations.js';
 
 let response;
 let requestError;
-for(let attempt=1;attempt<=3;attempt++){
+const MAX_ATTEMPTS=5;
+const describeError=error=>{
+  const parts=[];
+  for(let current=error;current;current=current.cause){
+    const detail=current.code?`${current.message} (${current.code})`:current.message;
+    if(detail&&!parts.includes(detail))parts.push(detail);
+  }
+  return parts.join(': ')||'Unknown request error';
+};
+for(let attempt=1;attempt<=MAX_ATTEMPTS;attempt++){
   try{
     response=await fetch(API_URL,{signal:AbortSignal.timeout(30_000),cache:'no-store'});
     if(response.status<500)break;
@@ -13,8 +22,8 @@ for(let attempt=1;attempt<=3;attempt++){
   }catch(error){
     requestError=error;
   }
-  if(attempt<3){
-    console.warn(`Open-Meteo request ${attempt} failed; retrying. ${requestError.message}`);
+  if(attempt<MAX_ATTEMPTS){
+    console.warn(`Open-Meteo request ${attempt}/${MAX_ATTEMPTS} failed; retrying. ${describeError(requestError)}`);
     await new Promise(resolve=>setTimeout(resolve,2_000*attempt));
   }
 }
@@ -38,7 +47,11 @@ if(!snapshot){
     selectForecastHours(previous.payload,previous.fetchedAt);
     if(Date.now()-previous.fetchedAt>24*60*60_000)throw new Error('Cached forecast is older than 24 hours.');
     snapshot=previous;
-    console.warn(`Open-Meteo unavailable (${requestError?.message??(response?`HTTP ${response.status}`:'no response')}); keeping cached forecast from ${new Date(previous.fetchedAt).toISOString()}.`);
+    const reason=requestError?describeError(requestError):(response?`HTTP ${response.status}`:'no response');
+    const cachedAt=new Date(previous.fetchedAt).toISOString();
+    const message=`Open-Meteo unavailable (${reason}); keeping cached forecast from ${cachedAt}.`;
+    console.warn(message);
+    if(process.env.GITHUB_ACTIONS==='true')console.log(`::warning title=Using cached weather::${message}`);
   }catch(error){
     throw new Error(`Open-Meteo unavailable and no usable cached forecast exists: ${error.message}`);
   }

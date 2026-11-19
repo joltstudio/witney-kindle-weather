@@ -7,9 +7,9 @@ on:
       - README.md
       - PROJECT.md
   schedule:
-    # The second slot in each half-hour is a recovery attempt if GitHub drops
-    # the first scheduled event. A cache-age gate prevents extra API requests.
-    - cron: '19,29,49,59 * * * *'
+    # Frequent, off-hour slots improve recovery when GitHub drops or delays a
+    # scheduled event. The 25-minute cache-age gate limits forecast API calls.
+    - cron: '7,17,27,37,47,57 * * * *'
   workflow_dispatch:
 
 permissions:
