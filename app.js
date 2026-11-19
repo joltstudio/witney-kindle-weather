@@ -1,143 +1,494 @@
-import { CONFIG } from './config.js';
-import { API_URL, DEMO_PAYLOAD, validatePayload, selectForecastHours, summarizeForecast, chartBoundaries, hourAt, dateLabel, clockLabel, hourLabel, weatherText, sunshineMinutes } from './weather.js';
-import { isFreshStationObservation, OBSERVATION_STATION } from './observations.js';
+import { CONFIG } from "./config.js";
+import {
+  API_URL,
+  DEMO_PAYLOAD,
+  chartBoundaries,
+  dateLabel,
+  hourAt,
+  hourLabel,
+  selectForecastHours,
+  sunshineMinutes,
+  summarizeForecast,
+  validatePayload,
+  weatherText,
+} from "./weather.js";
+import {
+  isFreshStationObservation,
+  OBSERVATION_STATION,
+} from "./observations.js";
 
-const $=id=>document.getElementById(id);
-document.documentElement.style.setProperty('--page-width',`${CONFIG.display.width}px`);
-document.documentElement.style.setProperty('--page-height',`${CONFIG.display.height}px`);
-document.documentElement.style.setProperty('--page-gutter',`${CONFIG.spacing.page}px`);
-document.documentElement.style.setProperty('--page-top',`${CONFIG.spacing.top}px`);
-document.documentElement.style.setProperty('--page-bottom',`${CONFIG.spacing.bottom}px`);
-document.documentElement.style.setProperty('--current-column-width',`${CONFIG.spacing.currentColumn}px`);
-document.documentElement.style.setProperty('--type-scale',String(CONFIG.typography.scale));
-document.documentElement.style.setProperty('--weather-font',`"${CONFIG.typography.body}",Arial,sans-serif`);
-const fitPreview=()=>document.documentElement.style.setProperty('--preview-scale',String(Math.min(1,innerWidth/CONFIG.display.width,innerHeight/CONFIG.display.height)));
-fitPreview();window.addEventListener('resize',fitPreview);
-const fmt=(v,d=0)=>Number.isFinite(v)?Number(v).toFixed(d):'—';
-const escapeSvg=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&apos;'}[c]));
+const byId = (id) => document.getElementById(id);
+const MINUTE_MS = 60 * 1000;
+const SNAPSHOT_TIMEOUT_MS = Math.min(CONFIG.api.timeoutMs, 2_000);
+const STALE_AFTER_MS = 2 * CONFIG.api.refreshMinutes * 60 * 1000;
 
-function render(payload,fetchedAt,{stale=false,error=false,demo=false,nowMs=Date.now(),stationObservation=null}={}){
-  const hours=selectForecastHours(payload,nowMs),summary=summarizeForecast(hours),current=payload.current;
-  $('current-temp').innerHTML=`${fmt(current.temperature_2m,0)}<sup>${CONFIG.units.temperature}</sup>`;
-  $('current-feels').textContent=`${fmt(current.apparent_temperature,0)}${CONFIG.units.temperature}`;
-  $('current-humidity').textContent=`${fmt(current.relative_humidity_2m)}${CONFIG.units.humidity}`;
-  $('current-wind').textContent=`${fmt(current.wind_speed_10m)}${CONFIG.units.wind}`;
-  $('condition-text').textContent=weatherText(current.weather_code);
-  const status=$('status');status.dataset.state=stale?'stale':error?'error':demo?'demo':'live';
-  $('status-text').textContent=stale?'STALE DATA':error?'DATA UNAVAILABLE':'';
-  $('updated').textContent=`Updated ${new Intl.DateTimeFormat('en-GB',{timeZone:CONFIG.location.timezone,hour:'2-digit',minute:'2-digit',day:'2-digit',month:'short',hourCycle:'h23'}).format(new Date(fetchedAt))}${stale?' · stale':''}`;
-  const usableObservation=isFreshStationObservation(stationObservation)?stationObservation:null;
-  const observationLine=$('observation-detail');
-  observationLine.hidden=!usableObservation;
-  if(usableObservation){
-    const parts=[`${OBSERVATION_STATION} obs ${clockLabel(usableObservation.observedAt/1000)}`,`${fmt(usableObservation.temperatureC,0)}°C`];
-    if(Number.isFinite(usableObservation.humidityPct))parts.push(`RH ≈${fmt(usableObservation.humidityPct,0)}%`);
-    if(Number.isFinite(usableObservation.windMph))parts.push(`Wind ${fmt(usableObservation.windMph,0)}mph`);
-    observationLine.textContent=parts.join(' · ');
+function configurePage() {
+  const root = document.documentElement;
+  const variables = {
+    "--page-width": `${CONFIG.display.width}px`,
+    "--page-height": `${CONFIG.display.height}px`,
+    "--page-gutter": `${CONFIG.spacing.page}px`,
+    "--page-top": `${CONFIG.spacing.top}px`,
+    "--page-bottom": `${CONFIG.spacing.bottom}px`,
+    "--current-column-width": `${CONFIG.spacing.currentColumn}px`,
+    "--type-scale": String(CONFIG.typography.scale),
+    "--weather-font": `"${CONFIG.typography.body}",Arial,sans-serif`,
+  };
+  for (const [name, value] of Object.entries(variables)) {
+    root.style.setProperty(name, value);
   }
-  $('announcement').textContent=`Witney weather updated ${clockLabel(fetchedAt/1000)}.`;
-  $('chart-wrap').innerHTML=chartSvg(hours,summary,nowMs);
+
+  const fitPreview = () => {
+    const scale = Math.min(
+      1,
+      innerWidth / CONFIG.display.width,
+      innerHeight / CONFIG.display.height,
+    );
+    root.style.setProperty("--preview-scale", String(scale));
+  };
+  fitPreview();
+  window.addEventListener("resize", fitPreview);
 }
 
-function chartSvg(hours,summary,nowMs=Date.now()){
-  const W=CONFIG.chart.width,L=CONFIG.chart.labelWidth,P=W-L,top=52,rowH=CONFIG.chart.rowHeight,gap=CONFIG.spacing.rowGap;
-  const chartHours=hours.length,chartStart=hours[0].time,step=P/chartHours;
-  const timeline=Array.from({length:chartHours},(_,i)=>({time:chartStart+i*3600}));
-  const tempValues=hours.flatMap(h=>[h.temp,h.feels]).filter(Number.isFinite);
-  const tempMin=tempValues.length?Math.floor(Math.min(...tempValues)-1):-10;
-  const tempMax=tempValues.length?Math.ceil(Math.max(...tempValues)+1):10;
-  const ranges={
-    temp:{key:'temp',title:'TEMP + FEELS',detail:`↑${fmt(summary.high,0)}° · ↓${fmt(summary.low,0)}°`,detail2:`↑${fmt(summary.feelsHigh,0)}° · ↓${fmt(summary.feelsLow,0)}°`,min:tempMin,max:tempMax},
-    rain:{key:'rain',title:'RAIN',detail:`${fmt(summary.rainPeak,1)} ${CONFIG.units.precipitation}/h MAX`,min:0,max:Math.max(.5,Math.ceil(Math.max(...hours.map(h=>h.rain??0))*2)/2)},
-    sun:{key:'sun',title:'SUNSHINE',detail:`${fmt(summary.sunshine.low)}–${fmt(summary.sunshine.high)} min/h`,min:0,max:60},
-    wind:{key:'wind',title:'WIND',detail:`${fmt(summary.wind.low)}–${fmt(summary.wind.high)} ${CONFIG.units.wind}`,min:0,max:Math.max(10,Math.ceil(Math.max(...hours.map(h=>h.wind??0))/5)*5)}
+function formatNumber(value, decimals = 0) {
+  return Number.isFinite(value) ? value.toFixed(decimals) : "—";
+}
+
+function escapeSvg(value) {
+  const entities = {
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&apos;",
   };
-  const rows=Object.values(ranges),H=top+rows.length*(rowH+gap)+24;
-  const svg=[`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Next ${CONFIG.forecast.hours} hours of forecast temperature, feels-like, rainfall, sunshine and wind.">`];
-  const boundaries=chartBoundaries(timeline),lanes=[];
-  for(let i=0;i<boundaries.length;i++){
-    const start=boundaries[i],end=boundaries[i+1]??chartHours,left=L+start*step,right=L+end*step,mid=(left+right)/2,label=dateLabel(timeline[start].time),textWidth=label.length*5.8*CONFIG.typography.scale;
-    const x=Math.max(L+textWidth/2,Math.min(L+P-textWidth/2,mid));
-    let lane=0;while(lanes[lane]!==undefined&&lanes[lane]>x-textWidth/2-4)lane++;
-    lanes[lane]=x+textWidth/2;
-    svg.push(`<text x="${x}" y="${19+lane*18}" text-anchor="middle" class="date">${escapeSvg(label)}</text>`);
+  return String(value).replace(/[&<>"']/g, (character) => entities[character]);
+}
+
+function showUnavailable(message, updateLabel) {
+  byId("status").dataset.state = "error";
+  byId("status-text").textContent = "DATA UNAVAILABLE";
+  byId("updated").textContent = updateLabel;
+  byId("condition-text").textContent = message;
+  byId("chart-wrap").innerHTML = `<div class="empty">${message}</div>`;
+}
+
+function render(payload, fetchedAt, options = {}) {
+  const {
+    stale = false,
+    error = false,
+    demo = false,
+    nowMs = Date.now(),
+    stationObservation = null,
+  } = options;
+  const forecastHours = selectForecastHours(payload, nowMs);
+  const summary = summarizeForecast(forecastHours);
+  const current = payload.current;
+
+  byId("current-temp").innerHTML =
+    `${formatNumber(current.temperature_2m)}<sup>${CONFIG.units.temperature}</sup>`;
+  byId("current-feels").textContent =
+    `${formatNumber(current.apparent_temperature)}${CONFIG.units.temperature}`;
+  byId("current-humidity").textContent =
+    `${formatNumber(current.relative_humidity_2m)}${CONFIG.units.humidity}`;
+  byId("current-wind").textContent =
+    `${formatNumber(current.wind_speed_10m)}${CONFIG.units.wind}`;
+  byId("condition-text").textContent = weatherText(current.weather_code);
+
+  const status = byId("status");
+  status.dataset.state = stale
+    ? "stale"
+    : error
+      ? "error"
+      : demo
+        ? "demo"
+        : "live";
+  byId("status-text").textContent = stale
+    ? "STALE DATA"
+    : error
+      ? "DATA UNAVAILABLE"
+      : "";
+  const updated = new Intl.DateTimeFormat("en-GB", {
+    timeZone: CONFIG.location.timezone,
+    hour: "2-digit",
+    minute: "2-digit",
+    day: "2-digit",
+    month: "short",
+    hourCycle: "h23",
+  }).format(new Date(fetchedAt));
+  byId("updated").textContent = `Updated ${updated}${stale ? " · stale" : ""}`;
+
+  const observation = isFreshStationObservation(stationObservation)
+    ? stationObservation
+    : null;
+  const observationLine = byId("observation-detail");
+  observationLine.hidden = !observation;
+  if (observation) {
+    const details = [
+      `${OBSERVATION_STATION} obs ${new Intl.DateTimeFormat("en-GB", {
+        timeZone: CONFIG.location.timezone,
+        hour: "2-digit",
+        minute: "2-digit",
+        hourCycle: "h23",
+      }).format(new Date(observation.observedAt))}`,
+      `${formatNumber(observation.temperatureC)}°C`,
+    ];
+    if (Number.isFinite(observation.humidityPct))
+      details.push(`RH ≈${formatNumber(observation.humidityPct)}%`);
+    if (Number.isFinite(observation.windMph))
+      details.push(`Wind ${formatNumber(observation.windMph)}mph`);
+    observationLine.textContent = details.join(" · ");
   }
-  for(const i of boundaries.filter(i=>i>0)){
-    const x=L+i*step;svg.push(`<line x1="${x}" x2="${x}" y1="43" y2="${H-22}" class="midnight"/>`);
+
+  byId("announcement").textContent =
+    `Witney weather updated ${new Intl.DateTimeFormat("en-GB", {
+      timeZone: CONFIG.location.timezone,
+      hour: "2-digit",
+      minute: "2-digit",
+      hourCycle: "h23",
+    }).format(new Date(fetchedAt))}.`;
+  byId("chart-wrap").innerHTML = chartSvg(forecastHours, summary, nowMs);
+}
+
+function chartSvg(hours, summary, nowMs = Date.now()) {
+  const { width, labelWidth, rowHeight } = CONFIG.chart;
+  const top = 52;
+  const plotWidth = width - labelWidth;
+  const gap = CONFIG.spacing.rowGap;
+  const hourCount = hours.length;
+  const firstHour = hours[0].time;
+  const step = plotWidth / hourCount;
+  const timeline = hours.map((hour) => ({ time: hour.time }));
+  const temperatures = hours
+    .flatMap((hour) => [hour.temp, hour.feels])
+    .filter(Number.isFinite);
+  const temperatureMin = temperatures.length
+    ? Math.floor(Math.min(...temperatures) - 1)
+    : -10;
+  const temperatureMax = temperatures.length
+    ? Math.ceil(Math.max(...temperatures) + 1)
+    : 10;
+  const maximumRain = Math.max(0, ...hours.map((hour) => hour.rain ?? 0));
+  const maximumWind = Math.max(0, ...hours.map((hour) => hour.wind ?? 0));
+
+  const rows = [
+    {
+      key: "temp",
+      title: "TEMP + FEELS",
+      detail: `↑${formatNumber(summary.high)}° · ↓${formatNumber(summary.low)}°`,
+      detail2: `↑${formatNumber(summary.feelsHigh)}° · ↓${formatNumber(summary.feelsLow)}°`,
+      min: temperatureMin,
+      max: temperatureMax,
+    },
+    {
+      key: "rain",
+      title: "RAIN",
+      detail: `${formatNumber(summary.rainPeak, 1)} ${CONFIG.units.precipitation}/h MAX`,
+      min: 0,
+      max: Math.max(0.5, Math.ceil(maximumRain * 2) / 2),
+    },
+    {
+      key: "sun",
+      title: "SUNSHINE",
+      detail: `${formatNumber(summary.sunshine.low)}–${formatNumber(summary.sunshine.high)} ${CONFIG.units.sunshine}`,
+      min: 0,
+      max: 60,
+    },
+    {
+      key: "wind",
+      title: "WIND",
+      detail: `${formatNumber(summary.wind.low)}–${formatNumber(summary.wind.high)} ${CONFIG.units.wind}`,
+      min: 0,
+      max: Math.max(10, Math.ceil(maximumWind / 5) * 5),
+    },
+  ];
+
+  const height = top + rows.length * (rowHeight + gap) + 24;
+  const svg = [
+    `<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="Next ${CONFIG.forecast.hours} hours of forecast temperature, feels-like, rainfall, sunshine and wind.">`,
+  ];
+  const boundaries = chartBoundaries(timeline);
+  const occupiedLabels = [];
+
+  for (let index = 0; index < boundaries.length; index += 1) {
+    const start = boundaries[index];
+    const end = boundaries[index + 1] ?? hourCount;
+    const left = labelWidth + start * step;
+    const right = labelWidth + end * step;
+    const label = dateLabel(timeline[start].time);
+    const labelWidthEstimate = label.length * 5.8 * CONFIG.typography.scale;
+    const middle = (left + right) / 2;
+    const x = Math.max(
+      labelWidth + labelWidthEstimate / 2,
+      Math.min(labelWidth + plotWidth - labelWidthEstimate / 2, middle),
+    );
+    let lane = 0;
+    while (
+      occupiedLabels[lane] !== undefined &&
+      occupiedLabels[lane] > x - labelWidthEstimate / 2 - 4
+    )
+      lane += 1;
+    occupiedLabels[lane] = x + labelWidthEstimate / 2;
+    svg.push(
+      `<text x="${x}" y="${19 + lane * 18}" text-anchor="middle" class="date">${escapeSvg(label)}</text>`,
+    );
   }
-  const nowX=L+Math.max(0,Math.min(chartHours,(nowMs/1000-chartStart)/3600))*step;
-  svg.push(`<line x1="${nowX}" x2="${nowX}" y1="43" y2="${H-22}" class="now-marker"/><text x="${nowX+3}" y="49" class="now-label">NOW</text>`);
-  rows.forEach((series,r)=>{
-    const y=top+r*(rowH+gap),bottom=y+rowH;
-    svg.push(`<text x="0" y="${y+21}" class="metric">${escapeSvg(series.title)}</text><text x="0" y="${y+42}" class="scale">${escapeSvg(series.detail)}</text>`);
-    if(series.detail2)svg.push(`<text x="0" y="${y+61}" class="scale">${escapeSvg(series.detail2)}</text>`);
-    const py=v=>bottom-6-((Math.max(series.min,Math.min(series.max,v))-series.min)/(series.max-series.min||1))*(rowH-14);
-    if(series.key==='temp'){
-      for(const [key,cls] of [['temp','temp-line'],['feels','feels-line']]){
-        const d=hours.map((h,i)=>Number.isFinite(h[key])?`${i?'L':'M'} ${L+(i+.5)*step} ${py(h[key])}`:'').filter(Boolean).join(' ');
-        svg.push(`<path d="${d}" class="${cls}"/>`);
+
+  for (const index of boundaries.filter((boundary) => boundary > 0)) {
+    const x = labelWidth + index * step;
+    svg.push(
+      `<line x1="${x}" x2="${x}" y1="43" y2="${height - 22}" class="midnight"/>`,
+    );
+  }
+
+  const currentX =
+    labelWidth +
+    Math.max(0, Math.min(hourCount, (nowMs / 1000 - firstHour) / 3600)) * step;
+  svg.push(
+    `<line x1="${currentX}" x2="${currentX}" y1="43" y2="${height - 22}" class="now-marker"/><text x="${currentX + 3}" y="49" class="now-label">NOW</text>`,
+  );
+
+  rows.forEach((series, rowIndex) => {
+    const y = top + rowIndex * (rowHeight + gap);
+    const bottom = y + rowHeight;
+    const valueY = (value) =>
+      bottom -
+      6 -
+      ((Math.max(series.min, Math.min(series.max, value)) - series.min) /
+        (series.max - series.min || 1)) *
+        (rowHeight - 14);
+
+    svg.push(
+      `<text x="0" y="${y + 21}" class="metric">${escapeSvg(series.title)}</text>`,
+    );
+    svg.push(
+      `<text x="0" y="${y + 42}" class="scale">${escapeSvg(series.detail)}</text>`,
+    );
+    if (series.detail2)
+      svg.push(
+        `<text x="0" y="${y + 61}" class="scale">${escapeSvg(series.detail2)}</text>`,
+      );
+
+    if (series.key === "temp") {
+      for (const [key, className] of [
+        ["temp", "temp-line"],
+        ["feels", "feels-line"],
+      ]) {
+        const path = hours
+          .map((hour, index) =>
+            Number.isFinite(hour[key])
+              ? `${index ? "L" : "M"} ${labelWidth + (index + 0.5) * step} ${valueY(hour[key])}`
+              : "",
+          )
+          .filter(Boolean)
+          .join(" ");
+        svg.push(`<path d="${path}" class="${className}"/>`);
       }
-      for(const [key,highIndex,lowIndex,cls] of [['temp',summary.highIndex,summary.lowIndex,'air-extreme'],['feels',summary.feelsHighIndex,summary.feelsLowIndex,'feels-extreme']]){
-        for(const index of new Set([highIndex,lowIndex])){
-          if(index<0||!Number.isFinite(hours[index]?.[key]))continue;
-          const x=L+(index+.5)*step,yv=py(hours[index][key]);
-          svg.push(`<circle cx="${x}" cy="${yv}" r="3.5" class="extreme-dot ${cls}"/>`);
+
+      const extremeSeries = [
+        ["temp", summary.highIndex, summary.lowIndex, "air-extreme"],
+        [
+          "feels",
+          summary.feelsHighIndex,
+          summary.feelsLowIndex,
+          "feels-extreme",
+        ],
+      ];
+      for (const [key, highIndex, lowIndex, className] of extremeSeries) {
+        for (const index of new Set([highIndex, lowIndex])) {
+          if (index < 0 || !Number.isFinite(hours[index]?.[key])) continue;
+          const x = labelWidth + (index + 0.5) * step;
+          svg.push(
+            `<circle cx="${x}" cy="${valueY(hours[index][key])}" r="3.5" class="extreme-dot ${className}"/>`,
+          );
         }
       }
-    }else if(series.key==='humidity'){
-      const d=hours.map((h,i)=>Number.isFinite(h.humidity)?`${i?'L':'M'} ${L+(i+.5)*step} ${py(h.humidity)}`:'').filter(Boolean).join(' ');
-      svg.push(`<path d="${d}" class="series-line"/>`);
-    }else{
-      hours.forEach((h,i)=>{
-        const value=series.key==='sun'?sunshineMinutes(h.sunshine):h[series.key];
-        if(!Number.isFinite(value)||value<=0)return;
-        const x=L+i*step+step*.2,w=step*.6,yv=py(value);
-        svg.push(`<rect x="${x}" y="${yv}" width="${w}" height="${Math.max(1,bottom-6-yv)}" class="${series.key==='rain'?'rain-bar':'bar'}"/>`);
-      });
-    }
-  });
-  const axisY=H-6;
-  timeline.forEach((h,i)=>{if(hourAt(h.time)%6===0){const x=L+(i+.5)*step;svg.push(`<text x="${x}" y="${axisY}" text-anchor="middle" class="axis">${hourLabel(h.time,timeline)}</text>`);}});
-  svg.push('</svg>');return svg.join('');
-}
-
-async function fetchLive(){
-  const key=CONFIG.api.cacheKey,controller=new AbortController(),timer=setTimeout(()=>controller.abort(),CONFIG.api.timeoutMs);
-  const snapshotPromise=fetch('outputs/weather-snapshot.json',{cache:'no-store'})
-    .then(r=>r.ok?r.json():null)
-    .then(s=>{
-      if(!s)return null;
-      const payload=validatePayload(s.payload);
-      return {payload,fetchedAt:s.fetchedAt,stationObservation:s.stationObservation??null,stationObservations:s.stationObservations??[]};
-    }).catch(()=>null);
-  try{
-    const response=await fetch(API_URL,{signal:controller.signal,cache:'no-store'});
-    if(!response.ok)throw new Error(`Weather service returned ${response.status}.`);
-    const payload=validatePayload(await response.json()),fetchedAt=Date.now();selectForecastHours(payload,fetchedAt);
-    const snapshot=await snapshotPromise;
-    const stationData={stationObservation:snapshot?.stationObservation??null,stationObservations:snapshot?.stationObservations??[]};
-    try{localStorage.setItem(key,JSON.stringify({payload,fetchedAt,...stationData}));}catch{}
-    render(payload,fetchedAt,stationData);return;
-  }catch(err){
-    let snapshot=await snapshotPromise;
-    if(snapshot){
-      try{selectForecastHours(snapshot.payload,snapshot.fetchedAt);}catch{snapshot=null;}
-    }
-    if(snapshot){
-      try{localStorage.setItem(key,JSON.stringify(snapshot));}catch{}
-      const stale=Date.now()-snapshot.fetchedAt>2*CONFIG.api.refreshMinutes*60_000;
-      render(snapshot.payload,snapshot.fetchedAt,{stale,nowMs:snapshot.fetchedAt,stationObservation:snapshot.stationObservation,stationObservations:snapshot.stationObservations});
-      $('status-text').textContent=stale?'STALE DATA':'CACHED DATA';
       return;
     }
-    const saved=readCache(key);
-    if(saved){render(saved.payload,saved.fetchedAt,{stale:true,error:true,nowMs:saved.fetchedAt,stationObservation:saved.stationObservation,stationObservations:saved.stationObservations});return;}
-    console.error('Weather unavailable:',err);$('status').dataset.state='error';$('status-text').textContent='DATA UNAVAILABLE';$('updated').textContent='No saved weather';$('condition-text').textContent='Weather unavailable';$('chart-wrap').innerHTML='<div class="empty">No weather data received. Check the connection; the display will retry.</div>';
-  }finally{clearTimeout(timer)}
-}
-function readCache(key){try{const value=JSON.parse(localStorage.getItem(key));if(!value||!Number.isFinite(value.fetchedAt))return null;validatePayload(value.payload);return value;}catch{return null}}
 
-const mode=new URLSearchParams(location.search).get('mode');
-if(mode==='fixture')render(DEMO_PAYLOAD,Date.parse('2026-11-17T10:45:00Z'),{demo:true,nowMs:DEMO_PAYLOAD.current.time*1000});
-else if(mode==='snapshot')fetch('outputs/weather-snapshot.json',{cache:'no-store'}).then(r=>{if(!r.ok)throw new Error('Snapshot unavailable.');return r.json()}).then(s=>{const payload=validatePayload(s.payload);selectForecastHours(payload,s.fetchedAt);const stale=Date.now()-s.fetchedAt>2*CONFIG.api.refreshMinutes*60_000;render(payload,s.fetchedAt,{stale,nowMs:s.fetchedAt,stationObservation:s.stationObservation})}).catch(()=>{$('status').dataset.state='error';$('status-text').textContent='DATA UNAVAILABLE';$('updated').textContent='No snapshot';$('condition-text').textContent='Weather unavailable';$('chart-wrap').innerHTML='<div class="empty">No weather snapshot is available.</div>'});
-else{fetchLive();setInterval(fetchLive,CONFIG.api.refreshMinutes*60_000);}
+    hours.forEach((hour, index) => {
+      const value =
+        series.key === "sun"
+          ? sunshineMinutes(hour.sunshine)
+          : hour[series.key];
+      if (!Number.isFinite(value) || value <= 0) return;
+      const x = labelWidth + index * step + step * 0.2;
+      const yValue = valueY(value);
+      const barHeight = Math.max(1, bottom - 6 - yValue);
+      const className = series.key === "rain" ? "rain-bar" : "bar";
+      svg.push(
+        `<rect x="${x}" y="${yValue}" width="${step * 0.6}" height="${barHeight}" class="${className}"/>`,
+      );
+    });
+  });
+
+  const axisY = height - 6;
+  timeline.forEach((hour, index) => {
+    if (hourAt(hour.time) % 6 !== 0) return;
+    const x = labelWidth + (index + 0.5) * step;
+    svg.push(
+      `<text x="${x}" y="${axisY}" text-anchor="middle" class="axis">${hourLabel(hour.time, timeline)}</text>`,
+    );
+  });
+
+  svg.push("</svg>");
+  return svg.join("");
+}
+
+async function readSnapshot() {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), SNAPSHOT_TIMEOUT_MS);
+  try {
+    const response = await fetch("outputs/weather-snapshot.json", {
+      cache: "no-store",
+      signal: controller.signal,
+    });
+    if (!response.ok) return null;
+    const snapshot = await response.json();
+    if (!Number.isFinite(snapshot.fetchedAt) || snapshot.fetchedAt <= 0) {
+      return null;
+    }
+    return {
+      ...snapshot,
+      payload: validatePayload(snapshot.payload),
+      stationObservation: snapshot.stationObservation ?? null,
+    };
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+function readLocalCache(cacheKey) {
+  try {
+    const snapshot = JSON.parse(localStorage.getItem(cacheKey));
+    if (!snapshot || !Number.isFinite(snapshot.fetchedAt)) return null;
+    validatePayload(snapshot.payload);
+    return snapshot;
+  } catch {
+    return null;
+  }
+}
+
+function isStale(snapshot) {
+  return Date.now() - snapshot.fetchedAt > STALE_AFTER_MS;
+}
+
+async function refreshWeather() {
+  const cacheKey = CONFIG.api.cacheKey;
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), CONFIG.api.timeoutMs);
+  const publishedSnapshotPromise = readSnapshot();
+
+  try {
+    const response = await fetch(API_URL, {
+      signal: controller.signal,
+      cache: "no-store",
+    });
+    if (!response.ok)
+      throw new Error(`Weather service returned ${response.status}.`);
+
+    const payload = validatePayload(await response.json());
+    const fetchedAt = Date.now();
+    selectForecastHours(payload, fetchedAt);
+    const publishedSnapshot = await publishedSnapshotPromise;
+    const snapshot = {
+      payload,
+      fetchedAt,
+      stationObservation: publishedSnapshot?.stationObservation ?? null,
+    };
+
+    try {
+      localStorage.setItem(cacheKey, JSON.stringify(snapshot));
+    } catch {
+      // The live forecast remains usable if browser storage is unavailable.
+    }
+    render(payload, fetchedAt, snapshot);
+  } catch (error) {
+    let snapshot = await publishedSnapshotPromise;
+    if (snapshot) {
+      try {
+        selectForecastHours(snapshot.payload, snapshot.fetchedAt);
+      } catch {
+        snapshot = null;
+      }
+    }
+
+    if (snapshot) {
+      try {
+        localStorage.setItem(cacheKey, JSON.stringify(snapshot));
+      } catch {
+        // The published snapshot can still be shown without persisting it.
+      }
+      render(snapshot.payload, snapshot.fetchedAt, {
+        stale: isStale(snapshot),
+        nowMs: snapshot.fetchedAt,
+        stationObservation: snapshot.stationObservation,
+      });
+      byId("status-text").textContent = isStale(snapshot)
+        ? "STALE DATA"
+        : "CACHED DATA";
+      return;
+    }
+
+    snapshot = readLocalCache(cacheKey);
+    if (snapshot) {
+      render(snapshot.payload, snapshot.fetchedAt, {
+        stale: true,
+        error: true,
+        nowMs: snapshot.fetchedAt,
+        stationObservation: snapshot.stationObservation,
+      });
+      return;
+    }
+
+    console.error("Weather unavailable:", error);
+    showUnavailable(
+      "No weather data received. Check the connection; the display will retry.",
+      "No saved weather",
+    );
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+async function refreshLoop() {
+  try {
+    await refreshWeather();
+  } finally {
+    window.setTimeout(refreshLoop, CONFIG.api.refreshMinutes * MINUTE_MS);
+  }
+}
+
+async function renderSnapshot() {
+  const snapshot = await readSnapshot();
+  if (!snapshot) {
+    showUnavailable("No weather snapshot is available.", "No snapshot");
+    return;
+  }
+
+  try {
+    selectForecastHours(snapshot.payload, snapshot.fetchedAt);
+    render(snapshot.payload, snapshot.fetchedAt, {
+      stale: isStale(snapshot),
+      nowMs: snapshot.fetchedAt,
+      stationObservation: snapshot.stationObservation,
+    });
+  } catch {
+    showUnavailable("No weather snapshot is available.", "No snapshot");
+  }
+}
+
+configurePage();
+const mode = new URLSearchParams(location.search).get("mode");
+if (mode === "fixture") {
+  render(DEMO_PAYLOAD, Date.parse("2026-11-17T10:45:00Z"), {
+    demo: true,
+    nowMs: DEMO_PAYLOAD.current.time * 1000,
+  });
+} else if (mode === "snapshot") {
+  renderSnapshot();
+} else {
+  refreshLoop();
+}

@@ -7,9 +7,9 @@ on:
       - README.md
       - PROJECT.md
   schedule:
-    # Temporary five-minute test cadence. Keep away from the top of the hour;
-    # GitHub can delay or drop scheduled events under load.
-    - cron: '2-57/5 * * * *'
+    # Five-minute test cadence, offset from the top of the hour. GitHub may
+    # delay or drop scheduled events; a cron entry is not a delivery guarantee.
+    - cron: "2,7,12,17,22,27,32,37,42,47,52,57 * * * *"
   workflow_dispatch:
 
 permissions:
@@ -58,7 +58,7 @@ jobs:
         if: steps.forecast.outcome == 'success' || steps.forecast.outcome == 'skipped'
         env:
           CHROME_BIN: ${{ steps.chrome.outputs.chrome-path }}
-          CHROME_NO_SANDBOX: '1'
+          CHROME_NO_SANDBOX: "1"
         run: |
           python3 -m http.server 4173 --bind 127.0.0.1 > /tmp/weather-http.log 2>&1 &
           server_pid=$!

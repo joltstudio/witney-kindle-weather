@@ -1,37 +1,54 @@
 <!doctype html>
 <html lang="en-GB">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-  <meta name="theme-color" content="#ffffff">
-  <title>Witney Weather</title>
-  <link rel="stylesheet" href="styles.css">
-</head>
-<body>
-  <main id="display" aria-label="Witney weather display">
-    <header class="masthead">
-      <div class="status" id="status"><span id="status-text"></span></div>
-    </header>
-    <section class="now" aria-label="Current weather">
-      <div class="now-grid">
-        <div class="temperature" id="current-temp">—<sup>°C</sup></div>
-        <div class="condition">
-          <div id="condition-text">Loading weather…</div>
-          <div class="current-detail" id="current-detail">
-            <span>Feels like <b id="current-feels">—°C</b></span><span class="separator" aria-hidden="true"> • </span>
-            <span>Humidity <b id="current-humidity">—%</b></span><span class="separator" aria-hidden="true"> • </span>
-            <span>Wind <b id="current-wind">—mph</b></span>
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, maximum-scale=1"
+    />
+    <meta name="theme-color" content="#ffffff" />
+    <title>Witney Weather</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main id="display" aria-label="Witney weather display">
+      <header class="masthead">
+        <div class="status" id="status"><span id="status-text"></span></div>
+      </header>
+      <section class="now" aria-label="Current weather">
+        <div class="now-grid">
+          <div class="temperature" id="current-temp">—<sup>°C</sup></div>
+          <div class="condition">
+            <div id="condition-text">Loading weather…</div>
+            <div class="current-detail" id="current-detail">
+              <span>Feels like <b id="current-feels">—°C</b></span
+              ><span class="separator" aria-hidden="true"> • </span>
+              <span>Humidity <b id="current-humidity">—%</b></span
+              ><span class="separator" aria-hidden="true"> • </span>
+              <span>Wind <b id="current-wind">—mph</b></span>
+            </div>
+            <div
+              class="observation-detail"
+              id="observation-detail"
+              hidden
+            ></div>
           </div>
-          <div class="observation-detail" id="observation-detail" hidden></div>
         </div>
-      </div>
-    </section>
-    <section class="forecast" aria-label="Hourly weather charts">
-      <div id="chart-wrap" class="chart-wrap"><div class="empty">Loading forecast…</div></div>
-    </section>
-    <footer class="footer"><span id="updated">Updated —</span><span>Weather · <b>Open-Meteo</b> · <b>UK Met Office</b> · <b>NOAA EGVN</b></span></footer>
-    <div class="sr-only" id="announcement" aria-live="polite"></div>
-  </main>
-  <script type="module" src="app.js"></script>
-</body>
+      </section>
+      <section class="forecast" aria-label="Hourly weather charts">
+        <div id="chart-wrap" class="chart-wrap">
+          <div class="empty">Loading forecast…</div>
+        </div>
+      </section>
+      <footer class="footer">
+        <span id="updated">Updated —</span
+        ><span
+          >Weather · <b>Open-Meteo</b> · <b>UK Met Office</b> ·
+          <b>NOAA EGVN</b></span
+        >
+      </footer>
+      <div class="sr-only" id="announcement" aria-live="polite"></div>
+    </main>
+    <script type="module" src="app.js"></script>
+  </body>
 </html>
