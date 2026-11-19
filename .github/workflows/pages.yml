@@ -7,9 +7,8 @@ on:
       - README.md
       - PROJECT.md
   schedule:
-    # Five-minute test cadence, offset from the top of the hour. GitHub may
-    # delay or drop scheduled events; a cron entry is not a delivery guarantee.
-    - cron: "2,7,12,17,22,27,32,37,42,47,52,57 * * * *"
+    # Hourly, offset from the hour boundary. GitHub may delay or drop scheduled events.
+    - cron: "17 * * * *"
   workflow_dispatch:
 
 permissions:

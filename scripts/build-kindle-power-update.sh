@@ -16,21 +16,24 @@ cp "$PROJECT_ROOT/device/kual-extension/WitneyWeather/bin/weather-loop.sh" \
   "$STAGE_DIR/extensions/WitneyWeather/bin/weather-loop.sh"
 cp "$PROJECT_ROOT/device/kindle-weather-watchdog.sh" \
   "$STAGE_DIR/kindle-weather/kindle-weather-watchdog.sh"
+cp "$PROJECT_ROOT/device/kindle-weather-config.example" \
+  "$STAGE_DIR/kindle-weather/config"
 
 cat > "$STAGE_DIR/README-UPDATE.txt" <<'EOF'
 Witney Weather — low-power and boot-launch update
 =================================================
 
-This update contains only the two KUAL app scripts and the existing cron
+This update contains the KUAL app scripts, weather config and existing cron
 watchdog target. It does not include firmware, jailbreak, MKK or keystore
 installers, and does not alter the root filesystem or crontab.
 
 Before copying, confirm the once-per-minute root cron line already installed
 for /mnt/us/kindle-weather/kindle-weather-watchdog.sh is still present. Back
-up that watchdog and the two extension scripts from the Kindle user volume.
-Copy the files in this archive to the matching paths on the Kindle volume,
-preserving the existing /mnt/us/kindle-weather/config, xh, CA bundle, cached
-weather image and KUAL menu.
+up that watchdog, config and the two extension scripts from the Kindle user
+volume. Copy the files in this archive to the matching paths on the Kindle
+volume. The included config restores the public image URL and sets
+WEATHER_REFRESH_SECONDS=1800 (30 minutes); it replaces the current config.
+Leave xh, CA bundle, cached weather image and KUAL menu in place.
 
 After safely ejecting and unplugging, the watchdog should start Witney Weather
 within one cron minute after boot. The display fetches, draws, turns Wi-Fi off,
@@ -53,6 +56,7 @@ rm -f "$ZIP_PATH"
   cd "$STAGE_DIR"
   zip -r -X "$ZIP_PATH" \
     README-UPDATE.txt \
+    kindle-weather/config \
     extensions/WitneyWeather/bin/weather.sh \
     extensions/WitneyWeather/bin/weather-loop.sh \
     kindle-weather/kindle-weather-watchdog.sh

@@ -2,8 +2,8 @@ import { appendFile, readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-// Four minutes leaves room for a scheduled build to start on its five-minute slot.
-export const REFRESH_AFTER_MS = 4 * 60 * 1000;
+// Leave 15 minutes of schedule-delay tolerance and avoid a recent manual/push fetch.
+export const REFRESH_AFTER_MS = 45 * 60 * 1000;
 
 export function shouldRefreshSnapshot(snapshot, eventName, now = Date.now()) {
   if (eventName !== "schedule") return true;

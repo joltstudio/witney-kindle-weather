@@ -35,7 +35,7 @@ test("weather loop refreshes on demand, retains cache, and sleeps with Wi-Fi off
   const launcher = read("bin/weather.sh");
   const loop = read("bin/weather-loop.sh");
   assert.match(menu, /"exitmenu": true/);
-  assert.match(loop, /INTERVAL=300/);
+  assert.match(loop, /INTERVAL=1800/);
   assert.match(loop, /trap 'REFRESH_NOW=1' USR1/);
   assert.match(launcher, /kill -USR1/);
   assert.match(loop, /last good screen retained/);
