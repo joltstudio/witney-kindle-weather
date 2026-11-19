@@ -92,7 +92,7 @@ fi
 echo $$ > "$PIDFILE"
 trap cleanup EXIT
 trap 'REFRESH_NOW=1' USR1
-trap 'HOME_EXIT=1; INTENTIONAL_EXIT=1; exit 0' USR2
+trap 'HOME_EXIT=1; INTENTIONAL_EXIT=1; log "Home key received; exiting weather display"; exit 0' USR2
 "$LIPC" com.lab126.powerd preventScreenSaver 1 2>/dev/null || true
 log 'Weather display opened'
 
@@ -102,12 +102,6 @@ log 'Weather display opened'
 if killall -STOP cvm >> "$LOG" 2>&1; then
   CVM_STOPPED=1
   log 'Kindle framework paused for full-screen display'
-  (
-    /usr/bin/waitforkey 102 >/dev/null 2>&1
-    kill -USR2 "$$" 2>/dev/null || true
-  ) &
-  echo "$!" > "$KEYWATCHPIDFILE"
-  log 'Press Home to exit the weather display'
 else
   log 'Could not pause Kindle framework; continuing with status strip visible'
 fi
@@ -126,6 +120,15 @@ display_cached_image() {
 }
 
 display_cached_image
+
+start_home_key_watcher() {
+  (
+    /usr/bin/waitforkey 102 >/dev/null 2>&1
+    kill -USR2 "$$" 2>/dev/null || true
+  ) &
+  echo "$!" > "$KEYWATCHPIDFILE"
+  log 'Home exit is ready'
+}
 
 fetch_and_display() {
   temp="$ROOT/weather.app-new.png"
@@ -208,6 +211,7 @@ sleep_until_refresh() {
 }
 
 refresh_weather() {
+  log 'Weather refresh started'
   "$LIPC" com.lab126.wifid enable 1 2>/dev/null || true
   sleep "$WIFI_SETTLE_SECONDS"
   fetch_and_display
@@ -215,6 +219,7 @@ refresh_weather() {
 }
 
 refresh_weather
+start_home_key_watcher
 while :; do
   sleep_until_refresh
   REFRESH_NOW=0
