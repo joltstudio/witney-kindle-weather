@@ -10,6 +10,13 @@ on:
     # Hourly, offset from the hour boundary. GitHub may delay or drop scheduled events.
     - cron: "17 * * * *"
   workflow_dispatch:
+    inputs:
+      trigger:
+        description: "Use timer gating only for automated dispatches"
+        required: false
+        type: choice
+        options: [manual, timer]
+        default: manual
 
 permissions:
   contents: read
@@ -42,6 +49,8 @@ jobs:
           restore-keys: weather-snapshot-
       - name: Check whether a scheduled forecast refresh is due
         id: refresh
+        env:
+          REFRESH_SOURCE: ${{ inputs.trigger || 'manual' }}
         run: node scripts/refresh-policy.mjs
       - name: Fetch and validate latest forecast
         id: forecast

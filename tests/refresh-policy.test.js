@@ -13,6 +13,27 @@ test("push and manual publishes always fetch current data", () => {
   assert.equal(shouldRefreshSnapshot(fresh, "workflow_dispatch", now), true);
 });
 
+test("external timer dispatches use the same 45-minute gate as scheduled runs", () => {
+  assert.equal(
+    shouldRefreshSnapshot(
+      { fetchedAt: now - REFRESH_AFTER_MS + 1 },
+      "workflow_dispatch",
+      now,
+      "timer",
+    ),
+    false,
+  );
+  assert.equal(
+    shouldRefreshSnapshot(
+      { fetchedAt: now - REFRESH_AFTER_MS },
+      "workflow_dispatch",
+      now,
+      "timer",
+    ),
+    true,
+  );
+});
+
 test("hourly schedule skips a recent snapshot and refreshes when it is 45 minutes old", () => {
   assert.equal(
     shouldRefreshSnapshot(
