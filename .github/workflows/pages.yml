@@ -32,7 +32,10 @@ jobs:
       - uses: browser-actions/setup-chrome@v2
         id: chrome
         with:
-          install-dependencies: true
+          # GitHub-hosted Ubuntu runners already include Chrome's runtime
+          # libraries. Installing them again runs apt-get update, which has
+          # intermittently hung or failed against the runner's package mirrors.
+          install-dependencies: false
       - uses: actions/cache/restore@v4
         with:
           path: outputs/weather-snapshot.json
