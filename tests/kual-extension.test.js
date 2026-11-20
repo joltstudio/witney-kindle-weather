@@ -57,3 +57,21 @@ test("weather loop refreshes on demand, retains cache, and sleeps with Wi-Fi off
   assert.match(launcher, /autostart\)/);
   assert.match(launcher, /witney-weather-user-exit/);
 });
+
+test("weather loop waits for Wi-Fi and retries transient DNS or network failures", () => {
+  const loop = read("bin/weather-loop.sh");
+  const config = readFileSync(
+    new URL("../../kindle-weather-config.example", root),
+    "utf8",
+  );
+
+  assert.match(config, /WEATHER_WIFI_SETTLE_SECONDS=20/);
+  assert.match(config, /WEATHER_FETCH_ATTEMPTS=3/);
+  assert.match(config, /WEATHER_RETRY_DELAY_SECONDS=10/);
+  assert.match(loop, /attempt=1/);
+  assert.match(loop, /while \[ "\$attempt" -le "\$FETCH_ATTEMPTS" \]/);
+  assert.match(loop, /Retrying weather download in \$delay seconds/);
+  assert.match(loop, /All \$FETCH_ATTEMPTS weather download attempts failed/);
+  assert.match(loop, /Wi-Fi enable request failed; download retries will continue/);
+  assert.match(loop, /Waiting \$WIFI_SETTLE_SECONDS seconds for Wi-Fi connection/);
+});

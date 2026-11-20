@@ -13,7 +13,9 @@ CA_BUNDLE="$ROOT/cacert.pem"
 EIPS=/usr/sbin/eips
 INTERVAL=1800
 DOWNLOAD_TIMEOUT=25
-WIFI_SETTLE_SECONDS=8
+WIFI_SETTLE_SECONDS=20
+FETCH_ATTEMPTS=3
+RETRY_DELAY_SECONDS=10
 REFRESH_NOW=0
 CVM_STOPPED=0
 HOME_EXIT=0
@@ -70,8 +72,12 @@ fi
 . "$CONFIG"
 INTERVAL=${WEATHER_REFRESH_SECONDS:-$INTERVAL}
 WIFI_SETTLE_SECONDS=${WEATHER_WIFI_SETTLE_SECONDS:-$WIFI_SETTLE_SECONDS}
+FETCH_ATTEMPTS=${WEATHER_FETCH_ATTEMPTS:-$FETCH_ATTEMPTS}
+RETRY_DELAY_SECONDS=${WEATHER_RETRY_DELAY_SECONDS:-$RETRY_DELAY_SECONDS}
 case "$INTERVAL" in ''|*[!0-9]*|0) log 'WEATHER_REFRESH_SECONDS must be a positive integer'; exit 1 ;; esac
 case "$WIFI_SETTLE_SECONDS" in ''|*[!0-9]*) log 'WEATHER_WIFI_SETTLE_SECONDS must be a nonnegative integer'; exit 1 ;; esac
+case "$FETCH_ATTEMPTS" in ''|*[!0-9]*|0) log 'WEATHER_FETCH_ATTEMPTS must be a positive integer'; exit 1 ;; esac
+case "$RETRY_DELAY_SECONDS" in ''|*[!0-9]*) log 'WEATHER_RETRY_DELAY_SECONDS must be a nonnegative integer'; exit 1 ;; esac
 if [ -z "${IMAGE_URL:-}" ] || [ "${IMAGE_URL#https://}" = "$IMAGE_URL" ]; then
   log 'IMAGE_URL must be an HTTPS URL'
   exit 1
@@ -132,42 +138,54 @@ start_home_key_watcher() {
 
 fetch_and_display() {
   temp="$ROOT/weather.app-new.png"
-  rm -f "$temp"
-  separator='?'
-  case "$IMAGE_URL" in *\?*) separator='&' ;; esac
-  url="${IMAGE_URL}${separator}ts=$(date +%s)"
-  "$XH" --verify "$CA_BUNDLE" -d -q -o "$temp" get "$url" &
-  fetch_pid=$!
-  echo "$fetch_pid" > "$FETCHPIDFILE"
-  seconds=0
-  while [ "$seconds" -lt "$DOWNLOAD_TIMEOUT" ]; do
-    kill -0 "$fetch_pid" 2>/dev/null || break
-    sleep 1
-    seconds=$((seconds + 1))
+  attempt=1
+  while [ "$attempt" -le "$FETCH_ATTEMPTS" ]; do
+    rm -f "$temp"
+    separator='?'
+    case "$IMAGE_URL" in *\?*) separator='&' ;; esac
+    url="${IMAGE_URL}${separator}ts=$(date +%s)-${attempt}"
+    log "Weather download attempt $attempt/$FETCH_ATTEMPTS"
+    "$XH" --verify "$CA_BUNDLE" -d -q -o "$temp" get "$url" &
+    fetch_pid=$!
+    echo "$fetch_pid" > "$FETCHPIDFILE"
+    seconds=0
+    while [ "$seconds" -lt "$DOWNLOAD_TIMEOUT" ]; do
+      kill -0 "$fetch_pid" 2>/dev/null || break
+      sleep 1
+      seconds=$((seconds + 1))
+    done
+    if kill -0 "$fetch_pid" 2>/dev/null; then
+      kill "$fetch_pid" 2>/dev/null || true
+      wait "$fetch_pid" 2>/dev/null || true
+      rm -f "$FETCHPIDFILE" "$temp"
+      log "Weather download attempt $attempt timed out"
+    else
+      rm -f "$FETCHPIDFILE"
+      if wait "$fetch_pid" && [ -s "$temp" ] && [ "$(wc -c < "$temp" | tr -d ' ')" -ge 1000 ]; then
+        if "$EIPS" -f -g "$temp"; then
+          mv "$temp" "$ROOT/weather.png"
+          log "Weather image fetched and displayed on attempt $attempt"
+          # K4 can otherwise suspend before the e-ink waveform has finished.
+          sleep 5
+          return 0
+        fi
+        rm -f "$temp"
+        log 'Kindle rejected weather image; last good screen retained'
+        return 1
+      fi
+      rm -f "$temp"
+      log "Weather download attempt $attempt failed; keeping last good image"
+    fi
+
+    if [ "$attempt" -lt "$FETCH_ATTEMPTS" ]; then
+      delay=$((RETRY_DELAY_SECONDS * attempt))
+      log "Retrying weather download in $delay seconds"
+      sleep "$delay"
+    fi
+    attempt=$((attempt + 1))
   done
-  if kill -0 "$fetch_pid" 2>/dev/null; then
-    kill "$fetch_pid" 2>/dev/null || true
-    wait "$fetch_pid" 2>/dev/null || true
-    rm -f "$FETCHPIDFILE"
-    rm -f "$temp"
-    log 'Weather fetch timed out; last good screen retained'
-    return 1
-  fi
-  rm -f "$FETCHPIDFILE"
-  if ! wait "$fetch_pid" || [ ! -s "$temp" ] || [ "$(wc -c < "$temp" | tr -d ' ')" -lt 1000 ]; then
-    rm -f "$temp"
-    log 'Weather fetch failed; last good screen retained'
-    return 1
-  fi
-  if "$EIPS" -f -g "$temp"; then
-    mv "$temp" "$ROOT/weather.png"
-    log 'Weather image fetched and displayed'
-    # K4 can otherwise suspend before the e-ink waveform has finished.
-    sleep 5
-    return 0
-  fi
-  rm -f "$temp"
-  log 'Kindle rejected weather image; last good screen retained'
+
+  log "All $FETCH_ATTEMPTS weather download attempts failed; last good screen retained"
   return 1
 }
 
@@ -212,7 +230,10 @@ sleep_until_refresh() {
 
 refresh_weather() {
   log 'Weather refresh started'
-  "$LIPC" com.lab126.wifid enable 1 2>/dev/null || true
+  if ! "$LIPC" com.lab126.wifid enable 1 2>/dev/null; then
+    log 'Wi-Fi enable request failed; download retries will continue'
+  fi
+  log "Waiting $WIFI_SETTLE_SECONDS seconds for Wi-Fi connection"
   sleep "$WIFI_SETTLE_SECONDS"
   fetch_and_display
   "$LIPC" com.lab126.wifid enable 0 2>/dev/null || true
