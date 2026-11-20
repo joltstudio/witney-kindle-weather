@@ -179,6 +179,14 @@ fetch_and_display() {
 
     if [ "$attempt" -lt "$FETCH_ATTEMPTS" ]; then
       delay=$((RETRY_DELAY_SECONDS * attempt))
+      log "Reconnecting Wi-Fi before retry $((attempt + 1))/$FETCH_ATTEMPTS"
+      "$LIPC" com.lab126.wifid enable 0 2>/dev/null || true
+      sleep 3
+      if ! "$LIPC" com.lab126.wifid enable 1 2>/dev/null; then
+        log 'Wi-Fi reconnect request failed; continuing bounded retries'
+      fi
+      log "Waiting $WIFI_SETTLE_SECONDS seconds after Wi-Fi reconnect"
+      sleep "$WIFI_SETTLE_SECONDS"
       log "Retrying weather download in $delay seconds"
       sleep "$delay"
     fi

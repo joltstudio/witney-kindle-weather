@@ -35,9 +35,9 @@ volume. The included config restores the public image URL and sets
 WEATHER_REFRESH_SECONDS=1800 (30 minutes); it replaces the current config.
 Leave xh, CA bundle, cached weather image and KUAL menu in place.
 
-The Wi-Fi client now gets 20 seconds to connect and the app retries failed
-downloads up to three times, with 10- and 20-second waits. It keeps the last
-good screen when every attempt fails.
+The Wi-Fi client now gets 20 seconds to connect. Between failed downloads the
+app cycles Wi-Fi, waits for reconnection, and retries up to three times with
+10- and 20-second backoffs. It keeps the last good screen if all attempts fail.
 
 After safely ejecting and unplugging, the watchdog should start Witney Weather
 within one cron minute after boot. The display fetches, draws, turns Wi-Fi off,

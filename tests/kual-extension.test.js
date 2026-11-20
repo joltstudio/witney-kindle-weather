@@ -70,6 +70,8 @@ test("weather loop waits for Wi-Fi and retries transient DNS or network failures
   assert.match(config, /WEATHER_RETRY_DELAY_SECONDS=10/);
   assert.match(loop, /attempt=1/);
   assert.match(loop, /while \[ "\$attempt" -le "\$FETCH_ATTEMPTS" \]/);
+  assert.match(loop, /Reconnecting Wi-Fi before retry/);
+  assert.match(loop, /Waiting \$WIFI_SETTLE_SECONDS seconds after Wi-Fi reconnect/);
   assert.match(loop, /Retrying weather download in \$delay seconds/);
   assert.match(loop, /All \$FETCH_ATTEMPTS weather download attempts failed/);
   assert.match(loop, /Wi-Fi enable request failed; download retries will continue/);
