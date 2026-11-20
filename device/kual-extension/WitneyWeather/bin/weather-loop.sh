@@ -202,55 +202,85 @@ sleep_until_refresh() {
   epoch=/sys/class/rtc/rtc1/since_epoch
   power_state=/sys/power/state
 
-  next_refresh_epoch() {
-    now=$(date +%s 2>/dev/null) || return 1
-    today=$(date '+%Y-%m-%d' 2>/dev/null) || return 1
-    today_noon=$(date -d "$today 12:00:00" +%s 2>/dev/null) || return 1
-    tomorrow=$(date -d "@$((today_noon + 86400))" '+%Y-%m-%d' 2>/dev/null) || return 1
-    next=
-
-    for day in "$today" "$tomorrow"; do
-      for clock_time in $(echo "$REFRESH_TIMES" | tr ',' ' '); do
-        case "$clock_time" in
-          [0-2][0-9]:[0-5][0-9]) ;;
-          *) return 1 ;;
-        esac
-        hour=$(expr "${clock_time%:*}" + 0 2>/dev/null) || return 1
-        [ "$hour" -le 23 ] || return 1
-        target=$(date -d "$day $clock_time:00" +%s 2>/dev/null) || return 1
-        if [ "$target" -gt "$now" ] && { [ -z "$next" ] || [ "$target" -lt "$next" ]; }; then
-          next=$target
-        fi
-      done
+  calculate_refresh_delay() {
+    schedule=$2
+    calendar=$3
+    set -- $1
+    [ "$#" -eq 3 ] || return 1
+    case "$1:$2:$3" in [0-2][0-9]:[0-5][0-9]:[0-5][0-9]) ;; *) return 1 ;; esac
+    current_hour=$((1$1 - 100))
+    current_minute=$((1$2 - 100))
+    current_second=$((1$3 - 100))
+    [ "$current_hour" -le 23 ] || return 1
+    set -- $calendar
+    [ "$#" -eq 4 ] || return 1
+    case "$1:$2:$3:$4" in [0-6]:[0-3][0-9]:[0-1][0-9]:[0-9][0-9][0-9][0-9]) ;; *) return 1 ;; esac
+    weekday=$1
+    current_day=$((1$2 - 100))
+    current_month=$((1$3 - 100))
+    current_year=$4
+    current_seconds=$((current_hour * 3600 + current_minute * 60 + current_second))
+    best_delay=
+    best_rolls_to_tomorrow=0
+    for clock_time in $(echo "$schedule" | tr ',' ' '); do
+      case "$clock_time" in [0-2][0-9]:[0-5][0-9]) ;; *) return 1 ;; esac
+      target_hour=$((1${clock_time%:*} - 100))
+      target_minute=$((1${clock_time#*:} - 100))
+      [ "$target_hour" -le 23 ] || return 1
+      target_seconds=$((target_hour * 3600 + target_minute * 60))
+      delay=$((target_seconds - current_seconds))
+      rolls_to_tomorrow=0
+      if [ "$delay" -le 0 ]; then
+        delay=$((delay + 86400))
+        rolls_to_tomorrow=1
+      fi
+      if [ -z "$best_delay" ] || [ "$delay" -lt "$best_delay" ]; then
+        best_delay=$delay
+        best_rolls_to_tomorrow=$rolls_to_tomorrow
+      fi
     done
-
-    [ -n "$next" ] || return 1
-    echo "$next"
+    case "$best_delay" in ''|*[!0-9]*|0) return 1 ;; esac
+    # Europe/London changes clocks at 01:00 UTC on the final Sundays in
+    # March and October. Correct an overnight delay when tomorrow is that
+    # Sunday so the monotonic RTC alarm lands on the configured local time.
+    if [ "$best_rolls_to_tomorrow" -eq 1 ] && [ "$weekday" -eq 6 ] && [ "$current_day" -ge 24 ]; then
+      case "$current_month" in
+        3) [ $((current_day + 8)) -gt 31 ] && best_delay=$((best_delay - 3600)) ;;
+        10) [ $((current_day + 8)) -gt 31 ] && best_delay=$((best_delay + 3600)) ;;
+      esac
+    fi
+    echo "$best_delay"
   }
 
-  wake_at=$(next_refresh_epoch) || {
-    log 'Could not calculate next local refresh time; checking again in five minutes'
-    sleep 300
+  # Kindle 4's BusyBox date cannot parse the GNU `date -d` expressions used
+  # by newer hosts. Calculate the delay from the device's local clock.
+  local_clock=$(date '+%H %M %S' 2>/dev/null) || local_clock=
+  local_calendar=$(date '+%w %d %m %Y' 2>/dev/null) || local_calendar=
+  refresh_delay=$(calculate_refresh_delay "$local_clock" "$REFRESH_TIMES" "$local_calendar") || refresh_delay=
+  case "$refresh_delay" in ''|*[!0-9]*|0)
+    log 'Refresh schedule or Kindle local clock was invalid; using four-hour low-CPU fallback'
+    sleep 14400
     return
-  }
+    ;;
+  esac
 
+  # /sys/class/rtc/rtc1/since_epoch is a monotonic counter since boot, not
+  # Unix time. Convert the local-clock delay onto that same RTC time base.
   if [ -w "$rtc" ] && [ -r "$epoch" ] && [ -w "$power_state" ]; then
     echo 0 > "$rtc" 2>/dev/null || true
     now=$(cat "$epoch" 2>/dev/null)
     case "$now" in
       ''|*[!0-9]*)
-        now=$(date +%s 2>/dev/null)
-        delay=$((wake_at - now))
-        [ "$delay" -gt 0 ] || delay=1
+        delay=$refresh_delay
         log 'RTC clock unavailable; using low-CPU timer sleep'
         sleep "$delay"
         return
         ;;
     esac
+    wake_at=$((now + refresh_delay))
     if ! echo "$wake_at" > "$rtc" 2>/dev/null; then
       log 'RTC alarm could not be set; using low-CPU timer sleep'
-      delay=$((wake_at - now))
-      [ "$delay" -gt 0 ] || delay=1
+      delay=$refresh_delay
       sleep "$delay"
       return
     fi
@@ -258,9 +288,7 @@ sleep_until_refresh() {
     log "Wi-Fi off; suspending until RTC wake at $wake_at"
     while [ "$REFRESH_NOW" -eq 0 ]; do
       if ! echo mem > "$power_state" 2>> "$LOG"; then
-        now=$(date +%s 2>/dev/null)
-        delay=$((wake_at - now))
-        [ "$delay" -gt 0 ] || delay=1
+        delay=$refresh_delay
         log "Suspend failed; falling back to low-CPU timer sleep for $delay seconds"
         sleep "$delay"
         return
@@ -275,16 +303,8 @@ sleep_until_refresh() {
     return
   fi
 
-  now=$(date +%s 2>/dev/null)
-  case "$now" in
-    ''|*[!0-9]*) log 'Clock unavailable; checking next refresh time in five minutes'; sleep 300 ;;
-    *)
-      delay=$((wake_at - now))
-      [ "$delay" -gt 0 ] || delay=1
-      log "RTC wake unavailable; using low-CPU timer sleep for $delay seconds"
-      sleep "$delay"
-      ;;
-  esac
+  log "RTC wake unavailable; using low-CPU timer sleep for $refresh_delay seconds"
+  sleep "$refresh_delay"
 }
 
 refresh_weather() {

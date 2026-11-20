@@ -14,7 +14,12 @@ export const CONFIG = {
     sunshine: "min/h",
   },
   forecast: { hours: 120, weekdayLabels: true },
-  api: { refreshMinutes: 30, timeoutMs: 10000, cacheKey: "witney-weather-v2" },
+  api: {
+    refreshMinutes: 30,
+    snapshotStaleMinutes: 300,
+    timeoutMs: 10000,
+    cacheKey: "witney-weather-v2",
+  },
   observations: {
     provider: "NOAA Aviation Weather Center METAR",
     stationId: "EGVN",

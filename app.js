@@ -21,7 +21,7 @@ import {
 const byId = (id) => document.getElementById(id);
 const MINUTE_MS = 60 * 1000;
 const SNAPSHOT_TIMEOUT_MS = Math.min(CONFIG.api.timeoutMs, 2_000);
-const STALE_AFTER_MS = 2 * CONFIG.api.refreshMinutes * 60 * 1000;
+const STALE_AFTER_MS = CONFIG.api.snapshotStaleMinutes * MINUTE_MS;
 
 function configurePage() {
   const root = document.documentElement;

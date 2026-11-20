@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 
 const root = new URL(
@@ -53,11 +54,33 @@ test("weather loop refreshes on demand, retains cache, and sleeps with Wi-Fi off
   assert.match(loop, /wifid enable 0/);
   assert.match(loop, /rtc1\/wakealarm/);
   assert.match(loop, /WEATHER_REFRESH_TIMES/);
-  assert.match(loop, /date -d "\$day \$clock_time:00" \+%s/);
+  assert.match(loop, /date '\+%H %M %S'/);
+  assert.match(loop, /wake_at=\$\(\(now \+ refresh_delay\)\)/);
+  assert.doesNotMatch(loop, /\$\(date -d/);
   assert.doesNotMatch(loop, /sleep "\$INTERVAL"/);
   assert.doesNotMatch(loop, /sleep 10/);
   assert.match(launcher, /autostart\)/);
   assert.match(launcher, /witney-weather-user-exit/);
+});
+
+test("Kindle schedule delay uses local clock arithmetic for configured slots", () => {
+  const loop = read("bin/weather-loop.sh");
+  const helper = loop.match(/  calculate_refresh_delay\(\) \{[\s\S]*?\n  \}/)?.[0];
+  assert.ok(helper, "schedule delay helper is present");
+  const run = (time, schedule, calendar = "5 20 11 2026") => execFileSync(
+    "sh",
+    ["-c", `${helper}\ncalculate_refresh_delay "$1" "$2" "$3"`, "test", time, schedule, calendar],
+    { encoding: "utf8" },
+  ).trim();
+  const slots = "06:22,10:22,14:22,18:22,22:22";
+
+  assert.equal(run("05 00 00", slots), "4920");
+  assert.equal(run("14 22 00", slots), "14400");
+  assert.equal(run("22 23 00", slots), "28740");
+  assert.equal(run("22 23 00", slots, "6 28 03 2026"), "25140");
+  assert.equal(run("22 23 00", slots, "6 24 10 2026"), "32340");
+  assert.throws(() => run("25 00 00", slots));
+  assert.throws(() => run("12 00 00", "bad"));
 });
 
 test("weather loop waits for Wi-Fi and retries transient DNS or network failures", () => {

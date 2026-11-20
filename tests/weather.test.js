@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import {
   API_URL,
   DEMO_PAYLOAD,
@@ -15,6 +16,12 @@ import {
   sunshineMinutes,
 } from "../weather.js";
 import { CONFIG } from "../config.js";
+
+test("browser freshness grace matches the four-hour publishing cadence", () => {
+  const app = readFileSync(new URL("../app.js", import.meta.url), "utf8");
+  assert.equal(CONFIG.api.snapshotStaleMinutes, 300);
+  assert.match(app, /STALE_AFTER_MS = CONFIG\.api\.snapshotStaleMinutes \* MINUTE_MS/);
+});
 
 function withForecastHours(hours, callback) {
   const original = CONFIG.forecast.hours;
