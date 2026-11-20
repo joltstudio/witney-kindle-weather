@@ -35,7 +35,7 @@ test("weather loop refreshes on demand, retains cache, and sleeps with Wi-Fi off
   const launcher = read("bin/weather.sh");
   const loop = read("bin/weather-loop.sh");
   assert.match(menu, /"exitmenu": true/);
-  assert.match(loop, /INTERVAL=1800/);
+  assert.match(loop, /REFRESH_TIMES=06:22,10:22,14:22,18:22,22:22/);
   assert.match(loop, /trap 'REFRESH_NOW=1' USR1/);
   assert.match(launcher, /kill -USR1/);
   assert.match(loop, /last good screen retained/);
@@ -52,7 +52,9 @@ test("weather loop refreshes on demand, retains cache, and sleeps with Wi-Fi off
   assert.match(loop, /echo mem > "\$power_state"/);
   assert.match(loop, /wifid enable 0/);
   assert.match(loop, /rtc1\/wakealarm/);
-  assert.match(loop, /WEATHER_REFRESH_SECONDS/);
+  assert.match(loop, /WEATHER_REFRESH_TIMES/);
+  assert.match(loop, /date -d "\$day \$clock_time:00" \+%s/);
+  assert.doesNotMatch(loop, /sleep "\$INTERVAL"/);
   assert.doesNotMatch(loop, /sleep 10/);
   assert.match(launcher, /autostart\)/);
   assert.match(launcher, /witney-weather-user-exit/);
@@ -65,6 +67,7 @@ test("weather loop waits for Wi-Fi and retries transient DNS or network failures
     "utf8",
   );
 
+  assert.match(config, /WEATHER_REFRESH_TIMES=06:22,10:22,14:22,18:22,22:22/);
   assert.match(config, /WEATHER_WIFI_SETTLE_SECONDS=20/);
   assert.match(config, /WEATHER_FETCH_ATTEMPTS=3/);
   assert.match(config, /WEATHER_RETRY_DELAY_SECONDS=10/);

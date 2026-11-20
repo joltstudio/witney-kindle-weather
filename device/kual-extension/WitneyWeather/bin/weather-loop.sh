@@ -11,7 +11,7 @@ LIPC=/usr/bin/lipc-set-prop
 XH="$ROOT/xh"
 CA_BUNDLE="$ROOT/cacert.pem"
 EIPS=/usr/sbin/eips
-INTERVAL=1800
+REFRESH_TIMES=06:22,10:22,14:22,18:22,22:22
 DOWNLOAD_TIMEOUT=25
 WIFI_SETTLE_SECONDS=20
 FETCH_ATTEMPTS=3
@@ -70,11 +70,11 @@ if [ ! -x /usr/bin/waitforkey ]; then
   exit 1
 fi
 . "$CONFIG"
-INTERVAL=${WEATHER_REFRESH_SECONDS:-$INTERVAL}
+REFRESH_TIMES=${WEATHER_REFRESH_TIMES:-$REFRESH_TIMES}
 WIFI_SETTLE_SECONDS=${WEATHER_WIFI_SETTLE_SECONDS:-$WIFI_SETTLE_SECONDS}
 FETCH_ATTEMPTS=${WEATHER_FETCH_ATTEMPTS:-$FETCH_ATTEMPTS}
 RETRY_DELAY_SECONDS=${WEATHER_RETRY_DELAY_SECONDS:-$RETRY_DELAY_SECONDS}
-case "$INTERVAL" in ''|*[!0-9]*|0) log 'WEATHER_REFRESH_SECONDS must be a positive integer'; exit 1 ;; esac
+case "$REFRESH_TIMES" in ''|*[!0-9:,]*) log 'WEATHER_REFRESH_TIMES must be a comma-separated list of HH:MM times'; exit 1 ;; esac
 case "$WIFI_SETTLE_SECONDS" in ''|*[!0-9]*) log 'WEATHER_WIFI_SETTLE_SECONDS must be a nonnegative integer'; exit 1 ;; esac
 case "$FETCH_ATTEMPTS" in ''|*[!0-9]*|0) log 'WEATHER_FETCH_ATTEMPTS must be a positive integer'; exit 1 ;; esac
 case "$RETRY_DELAY_SECONDS" in ''|*[!0-9]*) log 'WEATHER_RETRY_DELAY_SECONDS must be a nonnegative integer'; exit 1 ;; esac
@@ -202,24 +202,67 @@ sleep_until_refresh() {
   epoch=/sys/class/rtc/rtc1/since_epoch
   power_state=/sys/power/state
 
+  next_refresh_epoch() {
+    now=$(date +%s 2>/dev/null) || return 1
+    today=$(date '+%Y-%m-%d' 2>/dev/null) || return 1
+    today_noon=$(date -d "$today 12:00:00" +%s 2>/dev/null) || return 1
+    tomorrow=$(date -d "@$((today_noon + 86400))" '+%Y-%m-%d' 2>/dev/null) || return 1
+    next=
+
+    for day in "$today" "$tomorrow"; do
+      for clock_time in $(echo "$REFRESH_TIMES" | tr ',' ' '); do
+        case "$clock_time" in
+          [0-2][0-9]:[0-5][0-9]) ;;
+          *) return 1 ;;
+        esac
+        hour=$(expr "${clock_time%:*}" + 0 2>/dev/null) || return 1
+        [ "$hour" -le 23 ] || return 1
+        target=$(date -d "$day $clock_time:00" +%s 2>/dev/null) || return 1
+        if [ "$target" -gt "$now" ] && { [ -z "$next" ] || [ "$target" -lt "$next" ]; }; then
+          next=$target
+        fi
+      done
+    done
+
+    [ -n "$next" ] || return 1
+    echo "$next"
+  }
+
+  wake_at=$(next_refresh_epoch) || {
+    log 'Could not calculate next local refresh time; checking again in five minutes'
+    sleep 300
+    return
+  }
+
   if [ -w "$rtc" ] && [ -r "$epoch" ] && [ -w "$power_state" ]; then
     echo 0 > "$rtc" 2>/dev/null || true
     now=$(cat "$epoch" 2>/dev/null)
     case "$now" in
-      ''|*[!0-9]*) log 'RTC clock unavailable; using low-CPU timer sleep'; sleep "$INTERVAL"; return ;;
+      ''|*[!0-9]*)
+        now=$(date +%s 2>/dev/null)
+        delay=$((wake_at - now))
+        [ "$delay" -gt 0 ] || delay=1
+        log 'RTC clock unavailable; using low-CPU timer sleep'
+        sleep "$delay"
+        return
+        ;;
     esac
-    wake_at=$((now + INTERVAL))
     if ! echo "$wake_at" > "$rtc" 2>/dev/null; then
       log 'RTC alarm could not be set; using low-CPU timer sleep'
-      sleep "$INTERVAL"
+      delay=$((wake_at - now))
+      [ "$delay" -gt 0 ] || delay=1
+      sleep "$delay"
       return
     fi
     sync
     log "Wi-Fi off; suspending until RTC wake at $wake_at"
     while [ "$REFRESH_NOW" -eq 0 ]; do
       if ! echo mem > "$power_state" 2>> "$LOG"; then
-        log 'Suspend failed; falling back to low-CPU timer sleep'
-        sleep "$INTERVAL"
+        now=$(date +%s 2>/dev/null)
+        delay=$((wake_at - now))
+        [ "$delay" -gt 0 ] || delay=1
+        log "Suspend failed; falling back to low-CPU timer sleep for $delay seconds"
+        sleep "$delay"
         return
       fi
       # A key can wake the Kindle early. Keep the image up, but do not spend
@@ -232,8 +275,16 @@ sleep_until_refresh() {
     return
   fi
 
-  log 'RTC wake unavailable; using low-CPU timer sleep'
-  sleep "$INTERVAL"
+  now=$(date +%s 2>/dev/null)
+  case "$now" in
+    ''|*[!0-9]*) log 'Clock unavailable; checking next refresh time in five minutes'; sleep 300 ;;
+    *)
+      delay=$((wake_at - now))
+      [ "$delay" -gt 0 ] || delay=1
+      log "RTC wake unavailable; using low-CPU timer sleep for $delay seconds"
+      sleep "$delay"
+      ;;
+  esac
 }
 
 refresh_weather() {

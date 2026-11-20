@@ -2,10 +2,11 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   REFRESH_AFTER_MS,
+  isPublishWindow,
   shouldRefreshSnapshot,
 } from "../scripts/refresh-policy.mjs";
 
-const now = Date.UTC(2026, 10, 18, 17, 0);
+const now = Date.UTC(2026, 10, 18, 18, 17); // 18:17 GMT, a due London slot.
 
 test("push and manual publishes always fetch current data", () => {
   const fresh = { fetchedAt: now - 1000 };
@@ -13,7 +14,7 @@ test("push and manual publishes always fetch current data", () => {
   assert.equal(shouldRefreshSnapshot(fresh, "workflow_dispatch", now), true);
 });
 
-test("external timer dispatches use the same 45-minute gate as scheduled runs", () => {
+test("external timer dispatches are restricted to the London publish slots", () => {
   assert.equal(
     shouldRefreshSnapshot(
       { fetchedAt: now - REFRESH_AFTER_MS + 1 },
@@ -34,7 +35,7 @@ test("external timer dispatches use the same 45-minute gate as scheduled runs", 
   );
 });
 
-test("hourly schedule skips a recent snapshot and refreshes when it is 45 minutes old", () => {
+test("hourly schedule skips recent snapshots and refreshes after the four-hour cadence", () => {
   assert.equal(
     shouldRefreshSnapshot(
       { fetchedAt: now - REFRESH_AFTER_MS + 1 },
@@ -58,6 +59,16 @@ test("hourly schedule skips a recent snapshot and refreshes when it is 45 minute
       now,
     ),
     true,
+  );
+});
+
+test("timer gating follows London time through daylight-saving changes", () => {
+  assert.equal(isPublishWindow(Date.UTC(2026, 0, 14, 6, 17)), true); // 06:17 GMT
+  assert.equal(isPublishWindow(Date.UTC(2026, 6, 14, 5, 17)), true); // 06:17 BST
+  assert.equal(isPublishWindow(Date.UTC(2026, 6, 14, 6, 17)), false); // 07:17 BST
+  assert.equal(
+    shouldRefreshSnapshot({ fetchedAt: now - 5 * 60 * 60 * 1000 }, "schedule", Date.UTC(2026, 10, 18, 19, 17)),
+    false,
   );
 });
 

@@ -1,14 +1,14 @@
 name: Publish Witney weather
 
 on:
+  schedule:
+    # Hourly clock; the refresh policy only fetches at five London-time slots.
+    - cron: "17 * * * *"
   push:
     branches: [main]
     paths-ignore:
       - README.md
       - PROJECT.md
-  schedule:
-    # Hourly, offset from the hour boundary. GitHub may delay or drop scheduled events.
-    - cron: "17 * * * *"
   workflow_dispatch:
     inputs:
       trigger:

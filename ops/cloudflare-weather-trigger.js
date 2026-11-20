@@ -1,8 +1,40 @@
 const REPOSITORY = "joltstudio/witney-kindle-weather";
 const WORKFLOW = "pages.yml";
+const TIME_ZONE = "Europe/London";
+const PUBLISH_HOURS = new Set([6, 10, 14, 18, 22]);
+
+export function isPublishWindow(scheduledTime) {
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: TIME_ZONE,
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(new Date(scheduledTime));
+  const values = Object.fromEntries(
+    parts
+      .filter(({ type }) => type === "hour" || type === "minute")
+      .map(({ type, value }) => [type, Number(value)]),
+  );
+  return values.minute === 17 && PUBLISH_HOURS.has(values.hour);
+}
 
 export default {
+  async fetch(request) {
+    const url = new URL(request.url);
+    if (url.pathname !== "/healthz") {
+      return new Response("Not found\n", { status: 404 });
+    }
+
+    return Response.json({ service: "witney-weather-trigger", status: "ok" });
+  },
+
   async scheduled(controller, env) {
+    const scheduledAt = new Date(controller.scheduledTime).toISOString();
+    console.log(`Cron started: ${scheduledAt} (${controller.cron})`);
+    if (!isPublishWindow(controller.scheduledTime)) {
+      console.log(`No publish due at ${scheduledAt}; checking next hour.`);
+      return;
+    }
     if (!env.GITHUB_TOKEN) {
       throw new Error("Missing GITHUB_TOKEN secret");
     }
@@ -15,6 +47,7 @@ export default {
           Accept: "application/vnd.github+json",
           Authorization: `Bearer ${env.GITHUB_TOKEN}`,
           "Content-Type": "application/json",
+          "User-Agent": "Witney-Kindle-Weather-Cron/1.0",
           "X-GitHub-Api-Version": "2022-11-28",
         },
         body: JSON.stringify({ ref: "main", inputs: { trigger: "timer" } }),
@@ -29,8 +62,6 @@ export default {
       );
     }
 
-    console.log(
-      `Dispatched ${WORKFLOW} at ${new Date(controller.scheduledTime).toISOString()}`,
-    );
+    console.log(`Dispatched ${WORKFLOW} at ${scheduledAt}`);
   },
 };

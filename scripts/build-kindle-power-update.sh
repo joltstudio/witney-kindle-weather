@@ -32,7 +32,7 @@ for /mnt/us/kindle-weather/kindle-weather-watchdog.sh is still present. Back
 up that watchdog, config and the two extension scripts from the Kindle user
 volume. Copy the files in this archive to the matching paths on the Kindle
 volume. The included config restores the public image URL and sets
-WEATHER_REFRESH_SECONDS=1800 (30 minutes); it replaces the current config.
+WEATHER_REFRESH_TIMES=06:22,10:22,14:22,18:22,22:22 (Kindle local time); it replaces the current config.
 Leave xh, CA bundle, cached weather image and KUAL menu in place.
 
 The Wi-Fi client now gets 20 seconds to connect. Between failed downloads the
@@ -41,7 +41,7 @@ app cycles Wi-Fi, waits for reconnection, and retries up to three times with
 
 After safely ejecting and unplugging, the watchdog should start Witney Weather
 within one cron minute after boot. The display fetches, draws, turns Wi-Fi off,
-and uses the K4 RTC alarm and suspend-to-RAM for the 30-minute idle interval.
+and uses the K4 RTC alarm and suspend-to-RAM until the next scheduled check.
 If RTC suspend is unavailable, it falls back to a sleeping timer. Press Home to
 return to the library; that suppresses relaunch until the next reboot. Open or
 refresh from KUAL clears the opt-out marker.

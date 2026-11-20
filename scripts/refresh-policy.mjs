@@ -2,8 +2,21 @@ import { appendFile, readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-// Leave 15 minutes of schedule-delay tolerance and avoid a recent manual/push fetch.
-export const REFRESH_AFTER_MS = 45 * 60 * 1000;
+const TIME_ZONE = "Europe/London";
+const PUBLISH_HOURS = new Set([6, 10, 14, 18, 22]);
+// Leave 15 minutes of scheduling tolerance while preventing duplicate timer fetches.
+export const REFRESH_AFTER_MS = (4 * 60 - 15) * 60 * 1000;
+
+export function isPublishWindow(now = Date.now()) {
+  const hour = Number(
+    new Intl.DateTimeFormat("en-GB", {
+      timeZone: TIME_ZONE,
+      hour: "2-digit",
+      hourCycle: "h23",
+    }).format(new Date(now)),
+  );
+  return PUBLISH_HOURS.has(hour);
+}
 
 export function shouldRefreshSnapshot(
   snapshot,
@@ -15,6 +28,7 @@ export function shouldRefreshSnapshot(
     eventName === "schedule" ||
     (eventName === "workflow_dispatch" && source === "timer");
   if (!isTimer) return true;
+  if (!isPublishWindow(now)) return false;
   const fetchedAt = Number(snapshot?.fetchedAt);
   if (!Number.isFinite(fetchedAt) || fetchedAt <= 0 || fetchedAt > now)
     return true;
