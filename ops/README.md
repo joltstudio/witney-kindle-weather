@@ -7,12 +7,12 @@ forecast is less than 3 hours 45 minutes old. Manual runs and pushes publish
 immediately. The Kindle checks the published PNG five minutes after each
 scheduled slot.
 
-The Cloudflare Worker is retained as an optional secondary trigger. Its Cron
-Events page showed no events in the past week on 2026-11-20, so it is not the
-active publishing clock and must not be relied on until actual invocations and
-GitHub dispatches are verified. If enabled later, it should dispatch only at
-the same five `Europe/London` slots; the workflow's age gate is intended to
-avoid duplicate forecast API requests.
+The Cloudflare Worker is retained as a secondary trigger. Its Cron Events page
+showed no events in the past week on 2026-11-20, but prior Observability notes
+record one successful test dispatch at 11:50 UTC; recurring hourly reliability
+is not verified. The source dispatches only at the five `Europe/London` slots,
+and the workflow's age gate avoids duplicate forecast API requests when both
+clocks fire.
 
 ## Cost and limits
 
