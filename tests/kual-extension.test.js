@@ -41,14 +41,14 @@ test("weather loop refreshes on demand, retains cache, and sleeps with Wi-Fi off
   assert.match(launcher, /kill -USR1/);
   assert.match(loop, /last good screen retained/);
   assert.match(loop, /Home key received; exiting weather display/);
+  assert.match(loop, /start_home_key_watcher\nsleep 3/);
+  const watcherCall = loop.indexOf("\nstart_home_key_watcher\n");
+  const cachedDisplayCall = loop.indexOf("\ndisplay_cached_image\n", watcherCall);
+  const firstRefreshCall = loop.lastIndexOf("\nrefresh_weather\n");
   assert.ok(
-    loop.indexOf("refresh_weather\nstart_home_key_watcher") >
-      loop.indexOf("display_cached_image\n"),
+    watcherCall < cachedDisplayCall && cachedDisplayCall < firstRefreshCall,
   );
-  assert.ok(
-    loop.indexOf("refresh_weather\nstart_home_key_watcher") <
-      loop.indexOf("while :; do"),
-  );
+  assert.match(loop, /Home key forwarded to Kindle framework/);
   assert.match(loop, /Weather refresh started/);
   assert.match(loop, /echo mem > "\$power_state"/);
   assert.match(loop, /wifid enable 0/);

@@ -49,11 +49,18 @@ cleanup() {
   if [ "$CVM_STOPPED" -eq 1 ]; then
     killall -CONT cvm 2>/dev/null || true
     log 'Kindle framework resumed'
-    # The Home key wakes the stock library after CVM has been resumed.
-    if [ "$HOME_EXIT" -eq 1 ] && [ -w /proc/keypad ]; then
-      echo 'send 102' > /proc/keypad 2>/dev/null || true
-    fi
     CVM_STOPPED=0
+  fi
+  # waitforkey consumes Home, so replay it after the framework resumes. The
+  # brief pause avoids racing the framework's resume when exiting full-screen.
+  if [ "$HOME_EXIT" -eq 1 ]; then
+    sleep 1
+    if [ -w /proc/keypad ]; then
+      echo 'send 102' > /proc/keypad 2>/dev/null || true
+      log 'Home key forwarded to Kindle framework'
+    else
+      log 'Could not forward Home key to Kindle framework'
+    fi
   fi
   # Return wireless to the Kindle's normal state after the display exits.
   "$LIPC" com.lab126.wifid enable 1 2>/dev/null || true
@@ -102,6 +109,15 @@ trap 'HOME_EXIT=1; INTENTIONAL_EXIT=1; log "Home key received; exiting weather d
 "$LIPC" com.lab126.powerd preventScreenSaver 1 2>/dev/null || true
 log 'Weather display opened'
 
+start_home_key_watcher() {
+  (
+    /usr/bin/waitforkey 102 >/dev/null 2>&1
+    kill -USR2 "$$" 2>/dev/null || true
+  ) &
+  echo "$!" > "$KEYWATCHPIDFILE"
+  log 'Home exit is ready'
+}
+
 # K4 (SysV) has no Pillow LIPC service. Pause CVM to prevent its native
 # status strip from repainting over the framebuffer. The Home-key watcher
 # gives the user a direct, hardware-only way to exit this full-screen view.
@@ -111,6 +127,7 @@ if killall -STOP cvm >> "$LOG" 2>&1; then
 else
   log 'Could not pause Kindle framework; continuing with status strip visible'
 fi
+start_home_key_watcher
 sleep 3
 
 display_cached_image() {
@@ -126,15 +143,6 @@ display_cached_image() {
 }
 
 display_cached_image
-
-start_home_key_watcher() {
-  (
-    /usr/bin/waitforkey 102 >/dev/null 2>&1
-    kill -USR2 "$$" 2>/dev/null || true
-  ) &
-  echo "$!" > "$KEYWATCHPIDFILE"
-  log 'Home exit is ready'
-}
 
 fetch_and_display() {
   temp="$ROOT/weather.app-new.png"
@@ -319,7 +327,6 @@ refresh_weather() {
 }
 
 refresh_weather
-start_home_key_watcher
 while :; do
   sleep_until_refresh
   REFRESH_NOW=0
