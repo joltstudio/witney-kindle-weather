@@ -27,6 +27,8 @@ concurrency:
 
 jobs:
   build:
+    outputs:
+      publish: ${{ steps.refresh.outputs.due }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -63,7 +65,7 @@ jobs:
           path: outputs/weather-snapshot.json
           key: weather-snapshot-${{ github.run_id }}
       - name: Serve and render the 600×800 screen
-        if: steps.forecast.outcome == 'success' || steps.forecast.outcome == 'skipped'
+        if: steps.forecast.outcome == 'success'
         env:
           CHROME_BIN: ${{ steps.chrome.outputs.chrome-path }}
           CHROME_NO_SANDBOX: "1"
@@ -84,6 +86,7 @@ jobs:
             https://joltstudio.github.io/witney-kindle-weather/outputs/witney-weather-live-600x800.png \
             --output outputs/witney-weather-live-600x800.png
       - name: Assemble Pages site
+        if: steps.refresh.outputs.due == 'true'
         run: |
           mkdir -p site/assets site/outputs
           cp index.html app.js weather.js config.js observations.js styles.css kindle.html site/
@@ -91,11 +94,13 @@ jobs:
           cp outputs/witney-weather-live-600x800.png site/outputs/
           if [ -f outputs/weather-snapshot.json ]; then cp outputs/weather-snapshot.json site/outputs/; fi
       - uses: actions/upload-pages-artifact@v3
+        if: steps.refresh.outputs.due == 'true'
         with:
           path: site
 
   deploy:
     needs: build
+    if: needs.build.outputs.publish == 'true'
     runs-on: ubuntu-latest
     permissions:
       pages: write

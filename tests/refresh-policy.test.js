@@ -70,6 +70,7 @@ test("timer gating follows London time through daylight-saving changes", () => {
     shouldRefreshSnapshot({ fetchedAt: now - 5 * 60 * 60 * 1000 }, "schedule", Date.UTC(2026, 10, 18, 19, 17)),
     false,
   );
+  assert.equal(shouldRefreshSnapshot(undefined, "schedule", Date.UTC(2026, 10, 18, 19, 17)), true);
 });
 
 test("missing, malformed and future-dated snapshots trigger a live fetch", () => {

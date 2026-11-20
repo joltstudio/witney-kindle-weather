@@ -45,8 +45,9 @@ repository, a chat, or a log.
 
 The workflow marks Worker dispatches as `trigger=timer`. Timer-triggered runs
 are restricted to the five London slots and use a 3-hour-45-minute cache age
-gate. A gated run may perform a lightweight deployment using the existing
-snapshot without making another weather API request.
+gate. Off-slot or too-recent timer runs skip the Pages deployment; a missing or
+invalid cached forecast still causes a live fetch so the published site can be
+recovered.
 
 If the GitHub workflow returns 403, verify that the token is unexpired, is
 restricted to this repository, and has Actions write permission. If Worker

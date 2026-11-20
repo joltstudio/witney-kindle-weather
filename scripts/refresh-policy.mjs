@@ -28,10 +28,10 @@ export function shouldRefreshSnapshot(
     eventName === "schedule" ||
     (eventName === "workflow_dispatch" && source === "timer");
   if (!isTimer) return true;
-  if (!isPublishWindow(now)) return false;
   const fetchedAt = Number(snapshot?.fetchedAt);
   if (!Number.isFinite(fetchedAt) || fetchedAt <= 0 || fetchedAt > now)
     return true;
+  if (!isPublishWindow(now)) return false;
   return now - fetchedAt >= REFRESH_AFTER_MS;
 }
 
