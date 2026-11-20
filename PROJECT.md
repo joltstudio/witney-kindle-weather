@@ -1,8 +1,15 @@
 # Witney Kindle Weather — project log
 
+## 120-hour chart update — 2026-11-20
+
+- Created a separate managed worktree at `/Users/wes/.codex/worktrees/weather-five-day-design/build-a-weather-display-for-a`, based on `origin/main`, to keep unrelated changes in the working checkout out of this release.
+- Approved change: production screen defaults to a rolling 120-hour forecast, with all existing metric rows, uppercase weekday labels, unnumbered six-hour ticks, tighter chart-bottom spacing, a small gap below current conditions, and Sunshine above Rain. A rolling window can cross six calendar labels.
+- Forecast request is built from the configured duration; Open-Meteo was verified in the live preview with 121 requested hours for 120 complete future points. The separate local routes remain available: `/?mode=five-day-live` and `/?mode=five-day-fixture`.
+- Local preview command: `python3 -m http.server 4174 --bind 127.0.0.1`. Live response loaded on 2026-11-20 and was stamped 13:02 UK time. `npm test` passed 26/26; `git diff --check` passed. Deployment is in progress; next verify the GitHub Pages publish and public image.
+
 ## Goal and decisions
 
-- Kindle 4 Non-Touch D01100, portrait 600×800, firmware 4.1.4. Monochrome display; preserve the current Swiss-inspired layout, current conditions, and rolling 48-hour forecast.
+- Kindle 4 Non-Touch D01100, portrait 600×800, firmware 4.1.4. Monochrome display; preserve the current Swiss-inspired layout and current conditions, with a rolling 120-hour forecast.
 - Location 51.783, -1.486; `Europe/London`. Open-Meteo Forecast API uses its automatic Best Match model selection, which includes UKV when available and global fallback. Forecast fields: temperature, apparent temperature, precipitation, humidity, wind and sunshine duration. Sunshine is a derived minutes/hour value; never substitute cloud cover.
 - Latest Brize Norton EGVN METAR is optional current observation, shown separately with timestamp. NOAA is free and machine-readable. The display does not plot historical observations; request only a two-hour station window and reject stale/implausible reports.
 - GitHub Pages serves a rendered 600×800 grayscale PNG. GitHub Actions publishes hourly at minute 17 UTC. Kindle KUAL polls the image every 30 minutes, displays its cached image on failure, suspends between refreshes, and launches at boot.

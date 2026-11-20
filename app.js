@@ -1,11 +1,12 @@
 import { CONFIG } from "./config.js";
 import {
-  API_URL,
   DEMO_PAYLOAD,
   chartBoundaries,
   dateLabel,
+  forecastApiUrl,
   hourAt,
   hourLabel,
+  localParts,
   selectForecastHours,
   sunshineMinutes,
   summarizeForecast,
@@ -181,18 +182,18 @@ function chartSvg(hours, summary, nowMs = Date.now()) {
       max: temperatureMax,
     },
     {
-      key: "rain",
-      title: "RAIN",
-      detail: `${formatNumber(summary.rainPeak, 1)} ${CONFIG.units.precipitation}/h MAX`,
-      min: 0,
-      max: Math.max(0.5, Math.ceil(maximumRain * 2) / 2),
-    },
-    {
       key: "sun",
       title: "SUNSHINE",
       detail: `${formatNumber(summary.sunshine.low)}–${formatNumber(summary.sunshine.high)} ${CONFIG.units.sunshine}`,
       min: 0,
       max: 60,
+    },
+    {
+      key: "rain",
+      title: "RAIN",
+      detail: `${formatNumber(summary.rainPeak, 1)} ${CONFIG.units.precipitation}/h MAX`,
+      min: 0,
+      max: Math.max(0.5, Math.ceil(maximumRain * 2) / 2),
     },
     {
       key: "wind",
@@ -203,7 +204,8 @@ function chartSvg(hours, summary, nowMs = Date.now()) {
     },
   ];
 
-  const height = top + rows.length * (rowHeight + gap) + 24;
+  const bottomPadding = CONFIG.forecast.weekdayLabels ? 0 : 24;
+  const height = top + rows.length * (rowHeight + gap) + bottomPadding;
   const svg = [
     `<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="Next ${CONFIG.forecast.hours} hours of forecast temperature, feels-like, rainfall, sunshine and wind.">`,
   ];
@@ -215,7 +217,9 @@ function chartSvg(hours, summary, nowMs = Date.now()) {
     const end = boundaries[index + 1] ?? hourCount;
     const left = labelWidth + start * step;
     const right = labelWidth + end * step;
-    const label = dateLabel(timeline[start].time);
+    const label = CONFIG.forecast.weekdayLabels
+      ? localParts(timeline[start].time).weekday
+      : dateLabel(timeline[start].time);
     const labelWidthEstimate = label.length * 5.8 * CONFIG.typography.scale;
     const middle = (left + right) / 2;
     const x = Math.max(
@@ -326,9 +330,15 @@ function chartSvg(hours, summary, nowMs = Date.now()) {
   timeline.forEach((hour, index) => {
     if (hourAt(hour.time) % 6 !== 0) return;
     const x = labelWidth + (index + 0.5) * step;
-    svg.push(
-      `<text x="${x}" y="${axisY}" text-anchor="middle" class="axis">${hourLabel(hour.time, timeline)}</text>`,
-    );
+    if (CONFIG.forecast.weekdayLabels) {
+      svg.push(
+        `<line x1="${x}" x2="${x}" y1="${height - 19}" y2="${height - 11}" class="axis-tick"/>`,
+      );
+    } else {
+      svg.push(
+        `<text x="${x}" y="${axisY}" text-anchor="middle" class="axis">${hourLabel(hour.time, timeline)}</text>`,
+      );
+    }
   });
 
   svg.push("</svg>");
@@ -382,7 +392,7 @@ async function refreshWeather() {
   const publishedSnapshotPromise = readSnapshot();
 
   try {
-    const response = await fetch(API_URL, {
+    const response = await fetch(forecastApiUrl(), {
       signal: controller.signal,
       cache: "no-store",
     });
@@ -482,7 +492,16 @@ async function renderSnapshot() {
 
 configurePage();
 const mode = new URLSearchParams(location.search).get("mode");
-if (mode === "fixture") {
+if (mode === "five-day-fixture" || mode === "five-day-live") {
+  CONFIG.forecast.hours = 120;
+  CONFIG.forecast.weekdayLabels = true;
+}
+if (mode === "five-day-fixture") {
+  render(DEMO_PAYLOAD, Date.parse("2026-11-17T10:45:00Z"), {
+    demo: true,
+    nowMs: DEMO_PAYLOAD.current.time * 1000,
+  });
+} else if (mode === "fixture") {
   render(DEMO_PAYLOAD, Date.parse("2026-11-17T10:45:00Z"), {
     demo: true,
     nowMs: DEMO_PAYLOAD.current.time * 1000,

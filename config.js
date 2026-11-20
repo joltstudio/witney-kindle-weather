@@ -13,7 +13,7 @@ export const CONFIG = {
     wind: "mph",
     sunshine: "min/h",
   },
-  forecast: { hours: 48 },
+  forecast: { hours: 120, weekdayLabels: true },
   api: { refreshMinutes: 30, timeoutMs: 10000, cacheKey: "witney-weather-v2" },
   observations: {
     provider: "NOAA Aviation Weather Center METAR",

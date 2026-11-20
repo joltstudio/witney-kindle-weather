@@ -1,6 +1,6 @@
 import { CONFIG } from "./config.js";
 
-export const API_URL = (() => {
+export function forecastApiUrl(hours = CONFIG.forecast.hours) {
   // Keep Open-Meteo's Best Match default: for the UK it selects UKV when
   // available and fills gaps with global guidance across the forecast window.
   const temperatureUnit =
@@ -19,7 +19,7 @@ export const API_URL = (() => {
     longitude: CONFIG.location.longitude,
     timezone: CONFIG.location.timezone,
     timeformat: "unixtime",
-    forecast_hours: String(CONFIG.forecast.hours + 1),
+    forecast_hours: String(hours + 1),
     temperature_unit: temperatureUnit,
     wind_speed_unit: windUnit,
     precipitation_unit: precipitationUnit,
@@ -29,7 +29,9 @@ export const API_URL = (() => {
       "temperature_2m,apparent_temperature,precipitation,relative_humidity_2m,wind_speed_10m,sunshine_duration",
   });
   return `https://api.open-meteo.com/v1/forecast?${q}`;
-})();
+}
+
+export const API_URL = forecastApiUrl();
 
 const REQUIRED = [
   "temperature_2m",
@@ -92,10 +94,11 @@ export function selectForecastHours(payload, nowMs) {
   const indexes = h.time
     .map((t, i) => ({ t: Number(t), i }))
     .filter(({ t }) => t >= hour && t < end);
-  if (indexes.length !== CONFIG.forecast.hours)
+  if (indexes.length !== CONFIG.forecast.hours) {
     throw new Error(
       `Expected ${CONFIG.forecast.hours} hourly forecasts; received ${indexes.length}.`,
     );
+  }
   return indexes.map(({ t, i }) => ({
     time: t,
     temp: finiteOrNull(h.temperature_2m[i]),
@@ -275,7 +278,7 @@ function demoHourly() {
     times = [],
     vals = {};
   for (const key of REQUIRED) vals[key] = [];
-  for (let i = 0; i < 50; i++) {
+  for (let i = 0; i < 146; i++) {
     const t = start + i * 3600,
       phase = i % 24,
       temp = 11 + 4 * Math.sin(((phase - 7) / 24) * Math.PI * 2);
