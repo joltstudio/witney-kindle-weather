@@ -5,7 +5,7 @@
 - Created a separate managed worktree at `/Users/wes/.codex/worktrees/weather-five-day-design/build-a-weather-display-for-a`, based on `origin/main`, to keep unrelated changes in the working checkout out of this release.
 - Approved change: production screen defaults to a rolling 120-hour forecast, with all existing metric rows, uppercase weekday labels, unnumbered six-hour ticks, tighter chart-bottom spacing, a small gap below current conditions, and Sunshine above Rain. A rolling window can cross six calendar labels.
 - Forecast request is built from the configured duration; Open-Meteo was verified in the live preview with 121 requested hours for 120 complete future points. The separate local routes remain available: `/?mode=five-day-live` and `/?mode=five-day-fixture`.
-- Local preview command: `python3 -m http.server 4174 --bind 127.0.0.1`. Live response loaded on 2026-11-20 and was stamped 13:02 UK time. `npm test` passed 26/26; `git diff --check` passed. Deployment is in progress; next verify the GitHub Pages publish and public image.
+- Local preview command: `python3 -m http.server 4174 --bind 127.0.0.1`. Live response loaded on 2026-11-20 and was stamped 13:02 UK time. `npm test` passed 26/26; `git diff --check` passed. Commit `1e0d7ec` was pushed to `main`; GitHub Pages run #53 completed successfully in 54 seconds. Verified the public Kindle image at `https://joltstudio.github.io/witney-kindle-weather/kindle.html`: it shows the 120-hour window, uppercase weekdays, Sunshine above Rain and an updated stamp of 13:12 UK time. Kindle pickup depends on its next successful 30-minute poll.
 
 ## Goal and decisions
 
