@@ -11,7 +11,7 @@ LIPC=/usr/bin/lipc-set-prop
 XH="$ROOT/xh"
 CA_BUNDLE="$ROOT/cacert.pem"
 EIPS=/usr/sbin/eips
-REFRESH_TIMES=06:22,10:22,14:22,18:22,22:22
+REFRESH_TIMES=05:05,06:05,07:05,08:05,09:05,10:05,11:05,12:05
 DOWNLOAD_TIMEOUT=25
 WIFI_SETTLE_SECONDS=20
 FETCH_ATTEMPTS=3
@@ -266,8 +266,8 @@ sleep_until_refresh() {
   local_calendar=$(date '+%w %d %m %Y' 2>/dev/null) || local_calendar=
   refresh_delay=$(calculate_refresh_delay "$local_clock" "$REFRESH_TIMES" "$local_calendar") || refresh_delay=
   case "$refresh_delay" in ''|*[!0-9]*|0)
-    log 'Refresh schedule or Kindle local clock was invalid; using four-hour low-CPU fallback'
-    sleep 14400
+    log 'Refresh schedule or Kindle local clock was invalid; using one-hour low-CPU fallback'
+    sleep 3600
     return
     ;;
   esac

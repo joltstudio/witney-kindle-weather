@@ -16,7 +16,7 @@ export const CONFIG = {
   forecast: { hours: 120, weekdayLabels: true },
   api: {
     refreshMinutes: 30,
-    snapshotStaleMinutes: 300,
+    snapshotStaleMinutes: 120,
     timeoutMs: 10000,
     cacheKey: "witney-weather-v2",
   },

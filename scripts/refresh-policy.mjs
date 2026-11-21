@@ -3,19 +3,17 @@ import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const TIME_ZONE = "Europe/London";
-const PUBLISH_HOURS = new Set([6, 10, 14, 18, 22]);
-// Leave 15 minutes of scheduling tolerance while preventing duplicate timer fetches.
-export const REFRESH_AFTER_MS = (4 * 60 - 15) * 60 * 1000;
+// Keep both hourly timers deduplicated while tolerating up to five minutes of delay.
+export const REFRESH_AFTER_MS = 55 * 60 * 1000;
 
 export function isPublishWindow(now = Date.now()) {
-  const hour = Number(
+  const minute = Number(
     new Intl.DateTimeFormat("en-GB", {
       timeZone: TIME_ZONE,
-      hour: "2-digit",
-      hourCycle: "h23",
+      minute: "2-digit",
     }).format(new Date(now)),
   );
-  return PUBLISH_HOURS.has(hour);
+  return minute === 57;
 }
 
 export function shouldRefreshSnapshot(

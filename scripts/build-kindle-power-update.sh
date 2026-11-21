@@ -32,10 +32,11 @@ for /mnt/us/kindle-weather/kindle-weather-watchdog.sh is still present. Back
 up that watchdog, config and the two extension scripts from the Kindle user
 volume. Copy the files in this archive to the matching paths on the Kindle
 volume. The included config restores the public image URL and sets
-WEATHER_REFRESH_TIMES=06:22,10:22,14:22,18:22,22:22 (Kindle local time); it replaces the current config.
+WEATHER_REFRESH_TIMES=05:05,06:05,07:05,08:05,09:05,10:05,11:05,12:05
+and WEATHER_WIFI_SETTLE_SECONDS=60; it replaces the current config.
 Leave xh, CA bundle, cached weather image and KUAL menu in place.
 
-The Wi-Fi client now gets 20 seconds to connect. Between failed downloads the
+The Wi-Fi client now gets 60 seconds to connect. Between failed downloads the
 app cycles Wi-Fi, waits for reconnection, and retries up to three times with
 10- and 20-second backoffs. It keeps the last good screen if all attempts fail.
 

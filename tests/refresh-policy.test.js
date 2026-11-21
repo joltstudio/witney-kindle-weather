@@ -6,7 +6,7 @@ import {
   shouldRefreshSnapshot,
 } from "../scripts/refresh-policy.mjs";
 
-const now = Date.UTC(2026, 10, 18, 18, 17); // 18:17 GMT, a due London slot.
+const now = Date.UTC(2026, 10, 18, 18, 57); // 18:57 GMT, an hourly slot.
 
 test("push and manual publishes always fetch current data", () => {
   const fresh = { fetchedAt: now - 1000 };
@@ -14,7 +14,7 @@ test("push and manual publishes always fetch current data", () => {
   assert.equal(shouldRefreshSnapshot(fresh, "workflow_dispatch", now), true);
 });
 
-test("external timer dispatches are restricted to the London publish slots", () => {
+test("external timer dispatches run hourly at :57 and deduplicate within 55 minutes", () => {
   assert.equal(
     shouldRefreshSnapshot(
       { fetchedAt: now - REFRESH_AFTER_MS + 1 },
@@ -35,7 +35,7 @@ test("external timer dispatches are restricted to the London publish slots", () 
   );
 });
 
-test("hourly schedule skips recent snapshots and refreshes after the four-hour cadence", () => {
+test("hourly schedule skips recent snapshots and refreshes after the 55-minute guard", () => {
   assert.equal(
     shouldRefreshSnapshot(
       { fetchedAt: now - REFRESH_AFTER_MS + 1 },
@@ -62,15 +62,16 @@ test("hourly schedule skips recent snapshots and refreshes after the four-hour c
   );
 });
 
-test("timer gating follows London time through daylight-saving changes", () => {
-  assert.equal(isPublishWindow(Date.UTC(2026, 0, 14, 6, 17)), true); // 06:17 GMT
-  assert.equal(isPublishWindow(Date.UTC(2026, 6, 14, 5, 17)), true); // 06:17 BST
-  assert.equal(isPublishWindow(Date.UTC(2026, 6, 14, 6, 17)), false); // 07:17 BST
+test("timer gating follows the hourly :57 minute through daylight-saving changes", () => {
+  assert.equal(isPublishWindow(Date.UTC(2026, 0, 14, 6, 57)), true);
+  assert.equal(isPublishWindow(Date.UTC(2026, 6, 14, 5, 57)), true);
+  assert.equal(isPublishWindow(Date.UTC(2026, 6, 14, 6, 57)), true);
+  assert.equal(isPublishWindow(Date.UTC(2026, 6, 14, 6, 56)), false);
   assert.equal(
-    shouldRefreshSnapshot({ fetchedAt: now - 5 * 60 * 60 * 1000 }, "schedule", Date.UTC(2026, 10, 18, 19, 17)),
+    shouldRefreshSnapshot({ fetchedAt: now - 5 * 60 * 1000 }, "schedule", Date.UTC(2026, 10, 18, 19, 56)),
     false,
   );
-  assert.equal(shouldRefreshSnapshot(undefined, "schedule", Date.UTC(2026, 10, 18, 19, 17)), true);
+  assert.equal(shouldRefreshSnapshot(undefined, "schedule", Date.UTC(2026, 10, 18, 19, 56)), true);
 });
 
 test("missing, malformed and future-dated snapshots trigger a live fetch", () => {

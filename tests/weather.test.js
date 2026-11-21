@@ -17,9 +17,9 @@ import {
 } from "../weather.js";
 import { CONFIG } from "../config.js";
 
-test("browser freshness grace matches the four-hour publishing cadence", () => {
+test("browser freshness grace allows one missed hourly publish", () => {
   const app = readFileSync(new URL("../app.js", import.meta.url), "utf8");
-  assert.equal(CONFIG.api.snapshotStaleMinutes, 300);
+  assert.equal(CONFIG.api.snapshotStaleMinutes, 120);
   assert.match(app, /STALE_AFTER_MS = CONFIG\.api\.snapshotStaleMinutes \* MINUTE_MS/);
 });
 

@@ -1,7 +1,6 @@
 const REPOSITORY = "joltstudio/witney-kindle-weather";
 const WORKFLOW = "pages.yml";
 const TIME_ZONE = "Europe/London";
-const PUBLISH_HOURS = new Set([6, 10, 14, 18, 22]);
 
 export function isPublishWindow(scheduledTime) {
   const parts = new Intl.DateTimeFormat("en-GB", {
@@ -10,12 +9,8 @@ export function isPublishWindow(scheduledTime) {
     minute: "2-digit",
     hourCycle: "h23",
   }).formatToParts(new Date(scheduledTime));
-  const values = Object.fromEntries(
-    parts
-      .filter(({ type }) => type === "hour" || type === "minute")
-      .map(({ type, value }) => [type, Number(value)]),
-  );
-  return values.minute === 17 && PUBLISH_HOURS.has(values.hour);
+  const minute = Number(parts.find(({ type }) => type === "minute")?.value);
+  return minute === 57;
 }
 
 export default {

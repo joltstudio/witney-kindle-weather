@@ -1,18 +1,18 @@
 # Weather publishing schedule
 
-The Pages workflow has a native hourly GitHub schedule at minute 17 UTC. Its
-refresh policy uses `Europe/London` and permits a forecast fetch only at 06, 10,
-14, 18 and 22 local time. It skips a duplicate timer fetch if the latest saved
-forecast is less than 3 hours 45 minutes old. Manual runs and pushes publish
-immediately. The Kindle checks the published PNG five minutes after each
-scheduled slot.
+The Pages workflow and optional Cloudflare timer run hourly at minute 57 UTC.
+The workflow permits one forecast fetch per hour after a 55-minute duplicate
+guard. The Kindle checks at :05 local time from 05:05 through 12:05. Manual runs
+and code pushes publish immediately.
 
 The Cloudflare Worker is retained as a secondary trigger. Its Cron Events page
 showed no events in the past week on 2026-11-20, but prior Observability notes
 record one successful test dispatch at 11:50 UTC; recurring hourly reliability
-is not verified. The source dispatches only at the five `Europe/London` slots,
-and the workflow's age gate avoids duplicate forecast API requests when both
-clocks fire.
+is not verified. The production Cron Trigger is configured at `57 * * * *`
+(verified in Cloudflare Settings on 2026-11-21). The currently deployed Worker
+source was not edited in the dashboard; its scheduled handler dispatches on
+each configured tick. The local source has the matching :57 guard. If both
+timers run, the Pages workflow's age guard avoids duplicate forecast requests.
 
 ## Cost and limits
 
@@ -35,19 +35,17 @@ repository, a chat, or a log.
    `ops/cloudflare-weather-trigger.js` into its editor. Deploy it.
 3. In the Worker settings, add `GITHUB_TOKEN` as a **secret** and enter the
    token there.
-4. Under Settings → Triggers, add the Cron Trigger `17 * * * *` (hourly at
-   minute 17 UTC) only if deliberately reactivating the fallback. Allow up to
+4. Under Settings → Triggers, confirm the Cron Trigger `57 * * * *` (hourly at
+   minute 57 UTC). Allow up to
    15 minutes for the schedule to propagate.
 5. Check Cloudflare's Cron Events, Worker logs and GitHub Actions. The Actions
    entry should say **Manually run** and complete successfully. Confirm the
    public snapshot's `fetchedAt` advances at a due London time. Do not remove
    GitHub's native schedule; it is the active trigger.
 
-The workflow marks Worker dispatches as `trigger=timer`. Timer-triggered runs
-are restricted to the five London slots and use a 3-hour-45-minute cache age
-gate. Off-slot or too-recent timer runs skip the Pages deployment; a missing or
-invalid cached forecast still causes a live fetch so the published site can be
-recovered.
+The workflow marks Worker dispatches as `trigger=timer`; timer-triggered runs
+require the scheduled :57 minute and a snapshot at least 55 minutes old. A
+missing or invalid cached forecast still causes a live fetch for recovery.
 
 If the GitHub workflow returns 403, verify that the token is unexpired, is
 restricted to this repository, and has Actions write permission. If Worker

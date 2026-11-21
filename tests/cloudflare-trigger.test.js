@@ -2,25 +2,26 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import trigger, { isPublishWindow } from "../ops/cloudflare-weather-trigger.js";
 
-test("dispatch window follows UK local time in winter and summer", () => {
-  assert.equal(isPublishWindow(Date.UTC(2026, 10, 20, 6, 17)), true);
-  assert.equal(isPublishWindow(Date.UTC(2026, 5, 20, 5, 17)), true);
-  assert.equal(isPublishWindow(Date.UTC(2026, 5, 20, 6, 17)), false);
+test("dispatch minute stays at :57 in winter and summer", () => {
+  assert.equal(isPublishWindow(Date.UTC(2026, 10, 20, 6, 57)), true);
+  assert.equal(isPublishWindow(Date.UTC(2026, 5, 20, 5, 57)), true);
+  assert.equal(isPublishWindow(Date.UTC(2026, 5, 20, 6, 57)), true);
+  assert.equal(isPublishWindow(Date.UTC(2026, 5, 20, 6, 56)), false);
 });
 
-test("dispatch window is limited to four-hour daytime slots", () => {
-  for (const hour of [6, 10, 14, 18, 22]) {
+test("dispatch window covers every hour at minute 57", () => {
+  for (let hour = 0; hour < 24; hour += 1) {
     assert.equal(
-      isPublishWindow(Date.UTC(2026, 10, 20, hour, 17)),
+      isPublishWindow(Date.UTC(2026, 10, 20, hour, 57)),
       true,
-      `${hour}:17 UK time should publish`,
+      `${hour}:57 UTC should dispatch`,
     );
   }
-  assert.equal(isPublishWindow(Date.UTC(2026, 10, 20, 7, 17)), false);
+  assert.equal(isPublishWindow(Date.UTC(2026, 10, 20, 22, 56)), false);
   assert.equal(isPublishWindow(Date.UTC(2026, 10, 20, 22, 0)), false);
 });
 
-test("scheduled handler dispatches the timer only in a publish window", async (t) => {
+test("scheduled handler dispatches the timer on the hourly minute", async (t) => {
   let request;
   t.mock.method(globalThis, "fetch", async (url, options) => {
     request = { url, options };
@@ -28,7 +29,7 @@ test("scheduled handler dispatches the timer only in a publish window", async (t
   });
 
   await trigger.scheduled(
-    { scheduledTime: Date.UTC(2026, 10, 19, 14, 17) },
+    { scheduledTime: Date.UTC(2026, 10, 19, 14, 57) },
     { GITHUB_TOKEN: "test-only-token" },
   );
 
@@ -51,7 +52,7 @@ test("scheduled handler reports rejected dispatches without exposing the token",
 
   await assert.rejects(
     trigger.scheduled(
-      { scheduledTime: Date.UTC(2026, 10, 20, 6, 17) },
+      { scheduledTime: Date.UTC(2026, 10, 20, 6, 57) },
       { GITHUB_TOKEN: "test-only-token" },
     ),
     /GitHub workflow dispatch failed \(403\)/,
@@ -60,18 +61,18 @@ test("scheduled handler reports rejected dispatches without exposing the token",
 
 test("scheduled handler refuses to run without a configured token", async () => {
   await assert.rejects(
-    trigger.scheduled({ scheduledTime: Date.UTC(2026, 10, 20, 6, 17) }, {}),
+    trigger.scheduled({ scheduledTime: Date.UTC(2026, 10, 20, 6, 57) }, {}),
     /Missing GITHUB_TOKEN secret/,
   );
 });
 
-test("off-window hourly trigger does not dispatch or need a GitHub token", async (t) => {
+test("off-minute trigger does not dispatch or need a GitHub token", async (t) => {
   t.mock.method(globalThis, "fetch", async () => {
     throw new Error("fetch must not run outside a publish window");
   });
 
   await trigger.scheduled(
-    { scheduledTime: Date.UTC(2026, 10, 20, 7, 17), cron: "17 * * * *" },
+    { scheduledTime: Date.UTC(2026, 10, 20, 7, 56), cron: "57 * * * *" },
     {},
   );
 });

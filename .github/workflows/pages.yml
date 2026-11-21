@@ -2,8 +2,8 @@ name: Publish Witney weather
 
 on:
   schedule:
-    # Hourly clock; the refresh policy only fetches at five London-time slots.
-    - cron: "17 * * * *"
+    # Publish before each hour so the Kindle can fetch shortly after :00.
+    - cron: "57 * * * *"
   push:
     branches: [main]
     paths-ignore:
@@ -49,7 +49,7 @@ jobs:
           path: outputs/weather-snapshot.json
           key: weather-snapshot-${{ github.run_id }}
           restore-keys: weather-snapshot-
-      - name: Check whether a scheduled forecast refresh is due
+      - name: Check whether an hourly forecast refresh is due
         id: refresh
         env:
           REFRESH_SOURCE: ${{ inputs.trigger || 'manual' }}

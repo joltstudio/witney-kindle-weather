@@ -36,7 +36,7 @@ test("weather loop refreshes on demand, retains cache, and sleeps with Wi-Fi off
   const launcher = read("bin/weather.sh");
   const loop = read("bin/weather-loop.sh");
   assert.match(menu, /"exitmenu": true/);
-  assert.match(loop, /REFRESH_TIMES=06:22,10:22,14:22,18:22,22:22/);
+  assert.match(loop, /REFRESH_TIMES=05:05,06:05,07:05,08:05,09:05,10:05,11:05,12:05/);
   assert.match(loop, /trap 'REFRESH_NOW=1' USR1/);
   assert.match(launcher, /kill -USR1/);
   assert.match(loop, /last good screen retained/);
@@ -72,13 +72,13 @@ test("Kindle schedule delay uses local clock arithmetic for configured slots", (
     ["-c", `${helper}\ncalculate_refresh_delay "$1" "$2" "$3"`, "test", time, schedule, calendar],
     { encoding: "utf8" },
   ).trim();
-  const slots = "06:22,10:22,14:22,18:22,22:22";
+  const slots = "05:05,06:05,07:05,08:05,09:05,10:05,11:05,12:05";
 
-  assert.equal(run("05 00 00", slots), "4920");
-  assert.equal(run("14 22 00", slots), "14400");
-  assert.equal(run("22 23 00", slots), "28740");
-  assert.equal(run("22 23 00", slots, "6 28 03 2026"), "25140");
-  assert.equal(run("22 23 00", slots, "6 24 10 2026"), "32340");
+  assert.equal(run("05 00 00", slots), "300");
+  assert.equal(run("05 05 00", slots), "3600");
+  assert.equal(run("12 06 00", slots), "61140");
+  assert.equal(run("22 23 00", slots, "6 28 03 2026"), "20520");
+  assert.equal(run("22 23 00", slots, "6 24 10 2026"), "27720");
   assert.throws(() => run("25 00 00", slots));
   assert.throws(() => run("12 00 00", "bad"));
 });
@@ -90,8 +90,8 @@ test("weather loop waits for Wi-Fi and retries transient DNS or network failures
     "utf8",
   );
 
-  assert.match(config, /WEATHER_REFRESH_TIMES=06:22,10:22,14:22,18:22,22:22/);
-  assert.match(config, /WEATHER_WIFI_SETTLE_SECONDS=20/);
+  assert.match(config, /WEATHER_REFRESH_TIMES=05:05,06:05,07:05,08:05,09:05,10:05,11:05,12:05/);
+  assert.match(config, /WEATHER_WIFI_SETTLE_SECONDS=60/);
   assert.match(config, /WEATHER_FETCH_ATTEMPTS=3/);
   assert.match(config, /WEATHER_RETRY_DELAY_SECONDS=10/);
   assert.match(loop, /attempt=1/);

@@ -1,6 +1,6 @@
 # Public PNG from this project's scheduled GitHub Pages deployment.
 IMAGE_URL='https://joltstudio.github.io/witney-kindle-weather/outputs/witney-weather-live-600x800.png'
-WEATHER_REFRESH_TIMES=06:22,10:22,14:22,18:22,22:22
-WEATHER_WIFI_SETTLE_SECONDS=20
+WEATHER_REFRESH_TIMES=05:05,06:05,07:05,08:05,09:05,10:05,11:05,12:05
+WEATHER_WIFI_SETTLE_SECONDS=60
 WEATHER_FETCH_ATTEMPTS=3
 WEATHER_RETRY_DELAY_SECONDS=10

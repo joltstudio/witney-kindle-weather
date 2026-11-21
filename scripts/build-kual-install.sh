@@ -55,8 +55,9 @@ The device must already contain /mnt/us/kindle-weather/config, xh, and cacert.pe
 from the earlier weather setup. The extension fetches the configured live
 600x800 grayscale PNG, retains the last good image on failure, turns Wi-Fi off
 between updates, and uses the K4 RTC wake alarm plus suspend-to-RAM when available.
-The default weather checks are at 06:22, 10:22, 14:22, 18:22 and 22:22 in
-Kindle local time; daylight-saving changes follow the device clock.
+The default weather checks run hourly from 05:05 through 12:05 in Kindle local
+time; daylight-saving changes follow the device clock. Wi-Fi gets 60 seconds
+to connect before each image request.
 
 Install sequence
 ----------------
