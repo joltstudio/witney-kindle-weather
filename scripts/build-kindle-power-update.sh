@@ -32,7 +32,7 @@ for /mnt/us/kindle-weather/kindle-weather-watchdog.sh is still present. Back
 up that watchdog, config and the two extension scripts from the Kindle user
 volume. Copy the files in this archive to the matching paths on the Kindle
 volume. The included config restores the public image URL and sets
-WEATHER_REFRESH_TIMES=05:05,06:05,07:05,08:05,09:05,10:05,11:05,12:05
+WEATHER_REFRESH_TIMES=05:05,06:05,07:05,08:05,09:05,10:05,11:05,12:05,13:05,14:05,15:05,16:05,17:05,18:05,19:05,20:05,21:05,22:05,23:05
 and WEATHER_WIFI_SETTLE_SECONDS=60; it replaces the current config.
 Leave xh, CA bundle, cached weather image and KUAL menu in place.
 

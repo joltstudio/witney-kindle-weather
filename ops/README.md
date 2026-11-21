@@ -4,7 +4,7 @@ The Pages workflow and optional Cloudflare timer are scheduled hourly at minute
 57 UTC. Scheduled events publish once the previous snapshot is at least 55
 minutes old. This remains valid if GitHub or Cloudflare starts a runner late;
 the workflow does not check the runner's current minute. The Kindle checks at
-:05 local time from 05:05 through 12:05. Manual runs and code pushes publish
+:05 local time from 05:05 through 23:05. Manual runs and code pushes publish
 immediately.
 
 The Cloudflare Worker is retained as a secondary trigger. Its Cron Events page
