@@ -1,18 +1,20 @@
 # Weather publishing schedule
 
-The Pages workflow and optional Cloudflare timer run hourly at minute 57 UTC.
-The workflow permits one forecast fetch per hour after a 55-minute duplicate
-guard. The Kindle checks at :05 local time from 05:05 through 12:05. Manual runs
-and code pushes publish immediately.
+The Pages workflow and optional Cloudflare timer are scheduled hourly at minute
+57 UTC. Scheduled events publish once the previous snapshot is at least 55
+minutes old. This remains valid if GitHub or Cloudflare starts a runner late;
+the workflow does not check the runner's current minute. The Kindle checks at
+:05 local time from 05:05 through 12:05. Manual runs and code pushes publish
+immediately.
 
 The Cloudflare Worker is retained as a secondary trigger. Its Cron Events page
 showed no events in the past week on 2026-11-20, but prior Observability notes
 record one successful test dispatch at 11:50 UTC; recurring hourly reliability
 is not verified. The production Cron Trigger is configured at `57 * * * *`
-(verified in Cloudflare Settings on 2026-11-21). The currently deployed Worker
-source was not edited in the dashboard; its scheduled handler dispatches on
-each configured tick. The local source has the matching :57 guard. If both
-timers run, the Pages workflow's age guard avoids duplicate forecast requests.
+(verified in Cloudflare Settings on 2026-11-21). The deployed Worker dispatches
+on each configured tick. Local source does not impose a second exact-minute
+check, so delayed Cron events still reach Pages. If both timers run, the Pages
+workflow's age guard avoids duplicate forecast requests.
 
 ## Cost and limits
 
@@ -44,8 +46,9 @@ repository, a chat, or a log.
    GitHub's native schedule; it is the active trigger.
 
 The workflow marks Worker dispatches as `trigger=timer`; timer-triggered runs
-require the scheduled :57 minute and a snapshot at least 55 minutes old. A
-missing or invalid cached forecast still causes a live fetch for recovery.
+publish if the snapshot is at least 55 minutes old, even when setup takes the
+runner past :57. A missing or invalid cached forecast still causes a live fetch
+for recovery.
 
 If the GitHub workflow returns 403, verify that the token is unexpired, is
 restricted to this repository, and has Actions write permission. If Worker

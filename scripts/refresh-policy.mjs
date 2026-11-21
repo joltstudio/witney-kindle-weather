@@ -2,19 +2,9 @@ import { appendFile, readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-const TIME_ZONE = "Europe/London";
-// Keep both hourly timers deduplicated while tolerating up to five minutes of delay.
+// Keep GitHub and Cloudflare hourly triggers deduplicated. Schedule runners may
+// start late, so due-ness must not depend on the wall-clock minute at runtime.
 export const REFRESH_AFTER_MS = 55 * 60 * 1000;
-
-export function isPublishWindow(now = Date.now()) {
-  const minute = Number(
-    new Intl.DateTimeFormat("en-GB", {
-      timeZone: TIME_ZONE,
-      minute: "2-digit",
-    }).format(new Date(now)),
-  );
-  return minute === 57;
-}
 
 export function shouldRefreshSnapshot(
   snapshot,
@@ -29,7 +19,6 @@ export function shouldRefreshSnapshot(
   const fetchedAt = Number(snapshot?.fetchedAt);
   if (!Number.isFinite(fetchedAt) || fetchedAt <= 0 || fetchedAt > now)
     return true;
-  if (!isPublishWindow(now)) return false;
   return now - fetchedAt >= REFRESH_AFTER_MS;
 }
 

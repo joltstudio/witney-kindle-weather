@@ -118,14 +118,6 @@ body {
   white-space: pre;
   color: #555b60;
 }
-.observation-detail {
-  font-size: calc(9.5px * var(--type-scale, 1));
-  line-height: 1.2;
-  color: #343a3f;
-  margin-top: 3px;
-  white-space: nowrap;
-  font-variant-numeric: tabular-nums;
-}
 .forecast {
   padding-top: 8px;
   display: flex;

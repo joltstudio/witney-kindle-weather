@@ -101,6 +101,26 @@ export function isFreshStationObservation(observation, nowMs = Date.now()) {
   );
 }
 
+export function currentMeasurements(
+  forecastCurrent,
+  stationObservation,
+  nowMs = Date.now(),
+) {
+  // METAR reports observed temperature, humidity and wind, but no apparent
+  // temperature. Keep feels-like from the forecast provider.
+  const observation = isFreshStationObservation(stationObservation, nowMs)
+    ? stationObservation
+    : null;
+  return {
+    temperatureC: observation?.temperatureC ?? forecastCurrent.temperature_2m,
+    apparentTemperatureC: forecastCurrent.apparent_temperature,
+    humidityPct:
+      observation?.humidityPct ?? forecastCurrent.relative_humidity_2m,
+    windMph: observation?.windMph ?? forecastCurrent.wind_speed_10m,
+    observedAt: observation?.observedAt ?? null,
+  };
+}
+
 export async function fetchStationData(
   fetchImpl = globalThis.fetch,
   nowMs = Date.now(),

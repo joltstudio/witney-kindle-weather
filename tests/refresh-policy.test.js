@@ -2,7 +2,6 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   REFRESH_AFTER_MS,
-  isPublishWindow,
   shouldRefreshSnapshot,
 } from "../scripts/refresh-policy.mjs";
 
@@ -14,7 +13,7 @@ test("push and manual publishes always fetch current data", () => {
   assert.equal(shouldRefreshSnapshot(fresh, "workflow_dispatch", now), true);
 });
 
-test("external timer dispatches run hourly at :57 and deduplicate within 55 minutes", () => {
+test("timer dispatches deduplicate within 55 minutes without a minute boundary", () => {
   assert.equal(
     shouldRefreshSnapshot(
       { fetchedAt: now - REFRESH_AFTER_MS + 1 },
@@ -62,16 +61,36 @@ test("hourly schedule skips recent snapshots and refreshes after the 55-minute g
   );
 });
 
-test("timer gating follows the hourly :57 minute through daylight-saving changes", () => {
-  assert.equal(isPublishWindow(Date.UTC(2026, 0, 14, 6, 57)), true);
-  assert.equal(isPublishWindow(Date.UTC(2026, 6, 14, 5, 57)), true);
-  assert.equal(isPublishWindow(Date.UTC(2026, 6, 14, 6, 57)), true);
-  assert.equal(isPublishWindow(Date.UTC(2026, 6, 14, 6, 56)), false);
+test("delayed schedule starts still publish if the cached forecast is old", () => {
   assert.equal(
-    shouldRefreshSnapshot({ fetchedAt: now - 5 * 60 * 1000 }, "schedule", Date.UTC(2026, 10, 18, 19, 56)),
+    shouldRefreshSnapshot(
+      { fetchedAt: now - 5 * 60 * 60 * 1000 },
+      "schedule",
+      Date.UTC(2026, 10, 18, 19, 47),
+    ),
+    true,
+  );
+  assert.equal(
+    shouldRefreshSnapshot(
+      { fetchedAt: now - 5 * 60 * 60 * 1000 },
+      "workflow_dispatch",
+      Date.UTC(2026, 10, 18, 19, 58),
+      "timer",
+    ),
+    true,
+  );
+  assert.equal(
+    shouldRefreshSnapshot(
+      { fetchedAt: now },
+      "schedule",
+      Date.UTC(2026, 10, 18, 19, 47),
+    ),
     false,
   );
-  assert.equal(shouldRefreshSnapshot(undefined, "schedule", Date.UTC(2026, 10, 18, 19, 56)), true);
+  assert.equal(
+    shouldRefreshSnapshot(undefined, "schedule", Date.UTC(2026, 10, 18, 19, 47)),
+    true,
+  );
 });
 
 test("missing, malformed and future-dated snapshots trigger a live fetch", () => {

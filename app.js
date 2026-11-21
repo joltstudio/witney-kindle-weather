@@ -14,8 +14,8 @@ import {
   weatherText,
 } from "./weather.js";
 import {
-  isFreshStationObservation,
-  OBSERVATION_STATION,
+  currentMeasurements,
+  OBSERVATION_STATION_ID,
 } from "./observations.js";
 
 const byId = (id) => document.getElementById(id);
@@ -84,17 +84,35 @@ function render(payload, fetchedAt, options = {}) {
   } = options;
   const forecastHours = selectForecastHours(payload, nowMs);
   const summary = summarizeForecast(forecastHours);
-  const current = payload.current;
+  const current = currentMeasurements(
+    payload.current,
+    stationObservation,
+    nowMs,
+  );
 
   byId("current-temp").innerHTML =
-    `${formatNumber(current.temperature_2m)}<sup>${CONFIG.units.temperature}</sup>`;
+    `${formatNumber(current.temperatureC)}<sup>${CONFIG.units.temperature}</sup>`;
   byId("current-feels").textContent =
-    `${formatNumber(current.apparent_temperature)}${CONFIG.units.temperature}`;
+    `${formatNumber(current.apparentTemperatureC)}${CONFIG.units.temperature}`;
   byId("current-humidity").textContent =
-    `${formatNumber(current.relative_humidity_2m)}${CONFIG.units.humidity}`;
+    `${formatNumber(current.humidityPct)}${CONFIG.units.humidity}`;
   byId("current-wind").textContent =
-    `${formatNumber(current.wind_speed_10m)}${CONFIG.units.wind}`;
-  byId("condition-text").textContent = weatherText(current.weather_code);
+    `${formatNumber(current.windMph)}${CONFIG.units.wind}`;
+  byId("condition-text").textContent = weatherText(
+    payload.current.weather_code,
+  );
+
+  const observedTime = current.observedAt
+    ? new Intl.DateTimeFormat("en-GB", {
+        timeZone: CONFIG.location.timezone,
+        hour: "2-digit",
+        minute: "2-digit",
+        hourCycle: "h23",
+      }).format(new Date(current.observedAt))
+    : "";
+  byId("observation-source").textContent = observedTime
+    ? `NOAA ${OBSERVATION_STATION_ID} ${observedTime}`
+    : `NOAA ${OBSERVATION_STATION_ID}`;
 
   const status = byId("status");
   status.dataset.state = stale
@@ -118,28 +136,6 @@ function render(payload, fetchedAt, options = {}) {
     hourCycle: "h23",
   }).format(new Date(fetchedAt));
   byId("updated").textContent = `Updated ${updated}${stale ? " · stale" : ""}`;
-
-  const observation = isFreshStationObservation(stationObservation)
-    ? stationObservation
-    : null;
-  const observationLine = byId("observation-detail");
-  observationLine.hidden = !observation;
-  if (observation) {
-    const details = [
-      `${OBSERVATION_STATION} obs ${new Intl.DateTimeFormat("en-GB", {
-        timeZone: CONFIG.location.timezone,
-        hour: "2-digit",
-        minute: "2-digit",
-        hourCycle: "h23",
-      }).format(new Date(observation.observedAt))}`,
-      `${formatNumber(observation.temperatureC)}°C`,
-    ];
-    if (Number.isFinite(observation.humidityPct))
-      details.push(`RH ≈${formatNumber(observation.humidityPct)}%`);
-    if (Number.isFinite(observation.windMph))
-      details.push(`Wind ${formatNumber(observation.windMph)}mph`);
-    observationLine.textContent = details.join(" · ");
-  }
 
   byId("announcement").textContent =
     `Witney weather updated ${new Intl.DateTimeFormat("en-GB", {

@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
+  currentMeasurements,
   fetchStationData,
   isFreshStationObservation,
   parseStationObservations,
@@ -37,6 +38,52 @@ test("parses a recent Brize Norton METAR into supported display units", () => {
   assert.ok(Math.abs(observation.windMph - 10.357) < 0.001);
   assert.equal(observation.observedAt, 1795006200 * 1000);
   assert.equal(isFreshStationObservation(observation, now), true);
+});
+
+test("uses fresh station temperature, humidity and wind in the current row", () => {
+  const observation = parseStationObservations([report()], now);
+  const current = currentMeasurements(
+    {
+      temperature_2m: 8,
+      apparent_temperature: 5,
+      relative_humidity_2m: 60,
+      wind_speed_10m: 3,
+    },
+    observation,
+    now,
+  );
+  assert.equal(current.temperatureC, 9);
+  assert.equal(current.apparentTemperatureC, 5);
+  assert.ok(current.humidityPct > 90);
+  assert.ok(Math.abs(current.windMph - 11.508) < 0.001);
+  assert.equal(current.observedAt, observation.observedAt);
+});
+
+test("falls back to forecast values when station readings are stale or missing", () => {
+  const forecast = {
+    temperature_2m: 8,
+    apparent_temperature: 5,
+    relative_humidity_2m: 60,
+    wind_speed_10m: 3,
+  };
+  const stale = parseStationObservations(
+    [report({ obsTime: now / 1000 - 91 * 60 })],
+    now,
+  );
+  assert.deepEqual(currentMeasurements(forecast, stale, now), {
+    temperatureC: 8,
+    apparentTemperatureC: 5,
+    humidityPct: 60,
+    windMph: 3,
+    observedAt: null,
+  });
+  assert.deepEqual(currentMeasurements(forecast, null, now), {
+    temperatureC: 8,
+    apparentTemperatureC: 5,
+    humidityPct: 60,
+    windMph: 3,
+    observedAt: null,
+  });
 });
 
 test("uses the newest usable METAR and rejects another station", () => {

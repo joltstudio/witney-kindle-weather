@@ -1,18 +1,5 @@
 const REPOSITORY = "joltstudio/witney-kindle-weather";
 const WORKFLOW = "pages.yml";
-const TIME_ZONE = "Europe/London";
-
-export function isPublishWindow(scheduledTime) {
-  const parts = new Intl.DateTimeFormat("en-GB", {
-    timeZone: TIME_ZONE,
-    hour: "2-digit",
-    minute: "2-digit",
-    hourCycle: "h23",
-  }).formatToParts(new Date(scheduledTime));
-  const minute = Number(parts.find(({ type }) => type === "minute")?.value);
-  return minute === 57;
-}
-
 export default {
   async fetch(request) {
     const url = new URL(request.url);
@@ -26,10 +13,6 @@ export default {
   async scheduled(controller, env) {
     const scheduledAt = new Date(controller.scheduledTime).toISOString();
     console.log(`Cron started: ${scheduledAt} (${controller.cron})`);
-    if (!isPublishWindow(controller.scheduledTime)) {
-      console.log(`No publish due at ${scheduledAt}; checking next hour.`);
-      return;
-    }
     if (!env.GITHUB_TOKEN) {
       throw new Error("Missing GITHUB_TOKEN secret");
     }
