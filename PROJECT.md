@@ -92,3 +92,8 @@
 - Corrected the Kindle poll schedule to hourly at :05 from 05:05 through 23:05 (last check before midnight). The hosted PNG remains on its separate hourly GitHub schedule. Updated device fallback/config, USB update bundle instructions, README, operations notes and schedule/DST tests.
 - `npm test`: 33/33 passed; `sh -n` and `git diff --check` pass. `outputs/witney-weather-low-power-update.zip` built and passed `unzip -t`; SHA-256 `9201dc203788bc1d3c40c8fa8faa11668027ab808628153988881c872c2c8dce`.
 - `/Volumes/Kindle` is not mounted, so the revised schedule is not installed on the physical Kindle yet. A USB install of the updated `config` and `weather-loop.sh` is required; repository push alone cannot change the device's local configuration. Next: push the source change, then install the bundle when the Kindle is connected and confirm `app.log` shows hourly targets through 23:05.
+
+## Kindle full-day cadence installed — 2026-11-21 18:28 UTC
+
+- Kindle mounted at `/Volumes/Kindle`. Backed up config, weather loop and launcher to `/Volumes/Kindle/kindle-weather/backup-before-full-day-cadence-20261121-1825/`; installed new config and loop. Installed config has checks 05:05 through 23:05 and retains the 60-second Wi-Fi settle period. Both files byte-match repository source; loop passes `sh -n`.
+- Installed config SHA-256 `3ae14eaed38c2f3797c6f0dff2c6b58a0d793a1041059f157e5b32c6153134fd`; loop SHA-256 `d2043e20016e1a9cbae5319d8a49a8d9a4d521ae88cdd36d91003ab07476086a`. Existing log shows the weather app had exited at 18:22. `diskutil unmount` was unavailable on this Mac, so safely eject the Kindle in Finder and unplug/reboot. Verify boot launch and logs at 19:05 or the next check after launch; no runtime wake is claimed yet.
