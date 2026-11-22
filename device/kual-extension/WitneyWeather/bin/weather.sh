@@ -3,6 +3,7 @@ ROOT=/mnt/us/kindle-weather
 APP=/mnt/us/extensions/WitneyWeather
 PIDFILE=/tmp/witney-weather.pid
 FETCHPIDFILE=/tmp/witney-weather-fetch.pid
+SLEEPPIDFILE=/tmp/witney-weather-wait.pid
 LOG="$ROOT/app.log"
 LIPC=/usr/bin/lipc-set-prop
 EXIT_MARKER=/tmp/witney-weather-user-exit
@@ -60,6 +61,18 @@ case "${1:-}" in
   stop)
     : > "$EXIT_MARKER"
     if daemon_is_running; then
+      # BusyBox ash may defer its TERM trap while it waits for a foreground
+      # sleep child. Stop the tracked wait first so the app can shut down now.
+      if [ -r "$SLEEPPIDFILE" ]; then
+        sleep_pid=$(cat "$SLEEPPIDFILE" 2>/dev/null)
+        case "$sleep_pid" in
+          ''|*[!0-9]*) ;;
+          *)
+            sleep_cmd=$(tr '\000' ' ' < "/proc/$sleep_pid/cmdline" 2>/dev/null)
+            case "$sleep_cmd" in *sleep*) kill "$sleep_pid" 2>/dev/null || true ;; esac
+            ;;
+        esac
+      fi
       if [ -r "$FETCHPIDFILE" ]; then
         fetch_pid=$(cat "$FETCHPIDFILE" 2>/dev/null)
         case "$fetch_pid" in

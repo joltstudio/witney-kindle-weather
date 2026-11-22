@@ -42,6 +42,13 @@ sleep_interruptibly() {
   rm -f "$SLEEPPIDFILE"
   return "$sleep_status"
 }
+cancel_tracked_sleep() {
+  [ -r "$SLEEPPIDFILE" ] || return 0
+  sleep_pid=$(cat "$SLEEPPIDFILE" 2>/dev/null)
+  case "$sleep_pid" in ''|*[!0-9]*) return 0 ;; esac
+  sleep_cmd=$(tr '\000' ' ' < "/proc/$sleep_pid/cmdline" 2>/dev/null)
+  case "$sleep_cmd" in *sleep*) kill "$sleep_pid" 2>/dev/null || true ;; esac
+}
 cleanup() {
   # Make the watchdog's opt-out visible before doing any cleanup. This way a
   # delayed process exit cannot make the minute cron start a second display.
@@ -166,7 +173,7 @@ if [ -r "$PIDFILE" ]; then
 fi
 echo $$ > "$PIDFILE"
 trap cleanup EXIT
-trap 'REFRESH_NOW=1' USR1
+trap 'REFRESH_NOW=1; cancel_tracked_sleep' USR1
 trap 'HOME_EXIT=1; INTENTIONAL_EXIT=1; log "Home key received; exiting weather display"; exit 0' USR2
 "$LIPC" com.lab126.powerd preventScreenSaver 1 2>/dev/null || true
 log 'Weather display opened'
@@ -180,6 +187,8 @@ start_home_key_watcher() {
     wait "$key_event_pid"
     key_status=$?
     rm -f "$KEYEVENTPIDFILE"
+    : > "$EXIT_MARKER"
+    cancel_tracked_sleep
     if [ "$key_status" -ne 0 ]; then
       log "Home key listener exited with status $key_status"
     fi
