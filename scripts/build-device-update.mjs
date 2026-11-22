@@ -21,6 +21,7 @@ const files = [
   ["menu.json", "device/kual-extension/WitneyWeather/menu.json"],
   ["weather.sh", "device/kual-extension/WitneyWeather/bin/weather.sh"],
   ["weather-loop.sh", "device/kual-extension/WitneyWeather/bin/weather-loop.sh"],
+  ["wifi-diagnostic.sh", "device/kual-extension/WitneyWeather/bin/wifi-diagnostic.sh"],
   ["watchdog.sh", "device/kindle-weather-watchdog.sh"],
 ];
 

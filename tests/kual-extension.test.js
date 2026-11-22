@@ -9,10 +9,10 @@ const root = new URL(
 );
 const read = (path) => readFileSync(new URL(path, root), "utf8");
 
-test("KUAL extension exposes open, refresh, and stop actions with valid scripts", () => {
+test("KUAL extension exposes weather, update and Wi-Fi diagnostic actions", () => {
   const menu = JSON.parse(read("menu.json"));
   const actions = menu.items.map((item) => item.params);
-  assert.deepEqual(actions, ["start", "refresh", "stop", "update"]);
+  assert.deepEqual(actions, ["start", "refresh", "stop", "update", ""]);
   assert.deepEqual(
     menu.items.map((item) => item.name),
     [
@@ -20,6 +20,7 @@ test("KUAL extension exposes open, refresh, and stop actions with valid scripts"
       "Refresh Forecast Now",
       "Exit Weather Display",
       "Update Weather App over Wi-Fi",
+      "Test Wi-Fi Connection",
     ],
   );
   assert.equal(menu.items[0].exitmenu, true);
@@ -28,11 +29,14 @@ test("KUAL extension exposes open, refresh, and stop actions with valid scripts"
   assert.equal("refresh" in menu.items[1], false);
   assert.equal(menu.items[3].action, "./bin/update.sh");
   assert.equal(menu.items[3].exitmenu, true);
+  assert.equal(menu.items[4].action, "./bin/wifi-diagnostic.sh");
+  assert.equal(menu.items[4].exitmenu, true);
   for (const [index, item] of menu.items.entries()) {
-    assert.equal(item.action, index === 3 ? "./bin/update.sh" : "./bin/weather.sh");
+    assert.equal(item.action, index === 3 ? "./bin/update.sh" : index === 4 ? "./bin/wifi-diagnostic.sh" : "./bin/weather.sh");
     assert.ok(existsSync(new URL(item.action.replace("./", ""), root)));
   }
   assert.equal(read("bin/update.sh").includes("WEATHER_UPDATE_BASE_URL"), true);
+  assert.ok(existsSync(new URL("bin/wifi-diagnostic.sh", root)));
   assert.match(
     read("config.xml"),
     /<menu type="json" dynamic="true">menu\.json<\/menu>/,

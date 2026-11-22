@@ -32,11 +32,11 @@ Build the user-volume-only low-power Kindle update bundle:
 sh scripts/build-kindle-power-update.sh
 ```
 
-It writes `outputs/witney-weather-low-power-update.zip`. The bundle contains the KUAL menu, Wi-Fi updater, weather scripts, and existing root-cron watchdog. Install it once over USB; after that, KUAL's `Update Weather App over Wi-Fi` action downloads and verifies future app files from GitHub Pages, keeps a rollback copy, and restarts the display. The updater preserves your local config. This changes user-volume files only; it does not install firmware or alter the root filesystem.
+It writes `outputs/witney-weather-low-power-update.zip`. The bundle contains the KUAL menu, Wi-Fi updater, Wi-Fi diagnostic, weather scripts, and existing root-cron watchdog. Install it once over USB; after that, KUAL's `Update Weather App over Wi-Fi` action downloads and verifies future app files from GitHub Pages, keeps a rollback copy, and restarts the display. The updater preserves your local config. This changes user-volume files only; it does not install firmware or alter the root filesystem.
 
 ## Updating the Kindle app over Wi-Fi
 
-The weather image already updates over Wi-Fi. Device code does not. The low-power update bundle now includes a KUAL updater bootstrap. Install the bundle once over USB, then select **Update Weather App over Wi-Fi** in KUAL for later app updates. The updater uses the existing HTTPS client and CA bundle, checks the downloaded files against a SHA-256 manifest, stages them before replacing the installed files, keeps a rollback copy, logs the outcome to `app.log`, preserves the device's local config, and restarts the display. It is manual; it does not silently install code in the background.
+The weather image already updates over Wi-Fi. Device code does not. The low-power update bundle now includes a KUAL updater bootstrap. Install the bundle once over USB, then select **Update Weather App over Wi-Fi** in KUAL for later app updates. The updater uses the existing HTTPS client and CA bundle, checks the downloaded files against a SHA-256 manifest, stages them before replacing the installed files, keeps a rollback copy, logs the outcome to `app.log`, preserves the device's local config, and restarts the display. It is manual; it does not silently install code in the background. KUAL also includes **Test Wi-Fi Connection**, which waits up to 120 seconds for the Kindle's `cmState` to become `CONNECTED`, measures connection time, records IP/DNS details, tests HTTPS to the GitHub Pages update host, and shows a summary on screen.
 
 The bootstrap itself and recovery still require USB. The Wi-Fi update route has not yet been verified on the physical Kindle; first-run verification must confirm the device has a SHA-256 utility and that a successful update appears in its log.
 
@@ -77,7 +77,7 @@ The GitHub Pages preview is [https://joltstudio.github.io/witney-kindle-weather/
 
 ## Kindle compatibility status
 
-The target is a jailbroken D01100 Kindle 4 Non-Touch, firmware **4.1.4**. Jailbreak, KUAL launch, and weather image fetch are confirmed by user report and app logs. GitHub Pages is public; refresh timing is currently under five-minute testing. A read-only backup of the user partition was made; the earlier weather daemon's stop state remains unconfirmed. The legacy KUAL menu overlay was addressed; the Kindle status bar may still redraw over the image. No firmware, jailbreak, MKK, or keystore package should be run again.
+The target is a jailbroken D01100 Kindle 4 Non-Touch, firmware **4.1.4**. Jailbreak, KUAL launch, and weather image fetch are confirmed by user report and app logs. The hosted image is published hourly. The device's hourly checks are firing, but its latest app log shows Wi-Fi enable request failures followed by DNS lookup failures; last successful device fetch was 2026-11-21 18:31. KUAL now has a diagnostic action to record connection state/time, IP/DNS and HTTPS status on-device before changing the weather loop. A read-only backup of the user partition was made; the earlier weather daemon's stop state remains unconfirmed. The legacy KUAL menu overlay was addressed; the Kindle status bar may still redraw over the image. No firmware, jailbreak, MKK, or keystore package should be run again.
 
 ## Reference pages
 

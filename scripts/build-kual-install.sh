@@ -59,8 +59,10 @@ The default weather checks run hourly from 05:05 through 23:05 in Kindle local
 time; daylight-saving changes follow the device clock. Wi-Fi gets 60 seconds
 to connect before each image request.
 After the one-time USB installation, KUAL > Witney Weather > Update Weather App
-over Wi-Fi fetches and verifies future app/config releases from GitHub Pages,
+over Wi-Fi fetches and verifies future app releases from GitHub Pages,
 backs up the installed files, and restarts the display. Wi-Fi must be available.
+Use Test Wi-Fi Connection to see the connected state, connection time, IP/DNS
+settings and HTTPS test result on the Kindle screen.
 
 Install sequence
 ----------------
@@ -76,8 +78,9 @@ Install sequence
    keystore-only package; keep Wi-Fi off during certificate setup.
 5. Ensure KUAL-KDK-1.0.azw2 is in documents and WitneyWeather is in extensions.
    Restart and tap KUAL in the library.
-6. In KUAL > Witney Weather, choose Open Weather Display. Use Refresh Forecast
-   Now or Exit Weather Display from KUAL. The physical Home button exits to the
+6. In KUAL > Witney Weather, use Test Wi-Fi Connection first if needed, then
+   choose Open Weather Display. Use Refresh Forecast Now or Exit Weather Display
+   from KUAL. The physical Home button exits to the
    library and suppresses auto-launch until the next reboot.
 7. To enable boot launch, keep the existing once-per-minute root cron entry and
    replace /mnt/us/kindle-weather/kindle-weather-watchdog.sh with the matching

@@ -16,6 +16,8 @@ cp "$PROJECT_ROOT/device/kual-extension/WitneyWeather/bin/update.sh" \
   "$STAGE_DIR/extensions/WitneyWeather/bin/update.sh"
 cp "$PROJECT_ROOT/device/kual-extension/WitneyWeather/bin/weather-loop.sh" \
   "$STAGE_DIR/extensions/WitneyWeather/bin/weather-loop.sh"
+cp "$PROJECT_ROOT/device/kual-extension/WitneyWeather/bin/wifi-diagnostic.sh" \
+  "$STAGE_DIR/extensions/WitneyWeather/bin/wifi-diagnostic.sh"
 cp "$PROJECT_ROOT/device/kual-extension/WitneyWeather/menu.json" \
   "$STAGE_DIR/extensions/WitneyWeather/menu.json"
 cp "$PROJECT_ROOT/device/kindle-weather-watchdog.sh" \
@@ -32,6 +34,9 @@ MKK or keystore installers and does not alter the root filesystem or crontab.
 This USB copy is a one-time updater bootstrap. Afterward, choose KUAL > Witney
 Weather > Update Weather App over Wi-Fi to fetch verified app files from
 GitHub Pages, keep a rollback copy, and restart the display.
+The KUAL menu also has Test Wi-Fi Connection. It waits up to 120 seconds for
+CONNECTED, reports the actual connection time and IP/DNS values, then tests
+HTTPS to the GitHub update host and displays the result on the Kindle.
 
 Before copying, confirm the once-per-minute root cron line already installed
 for /mnt/us/kindle-weather/kindle-weather-watchdog.sh is still present. Back
@@ -68,6 +73,7 @@ rm -f "$ZIP_PATH"
   extensions/WitneyWeather/menu.json \
     extensions/WitneyWeather/bin/weather.sh \
     extensions/WitneyWeather/bin/weather-loop.sh \
+  extensions/WitneyWeather/bin/wifi-diagnostic.sh \
   extensions/WitneyWeather/bin/update.sh \
     kindle-weather/kindle-weather-watchdog.sh
 )

@@ -24,6 +24,12 @@
       "action": "./bin/update.sh",
       "params": "update",
       "exitmenu": true
+    },
+    {
+      "name": "Test Wi-Fi Connection",
+      "action": "./bin/wifi-diagnostic.sh",
+      "params": "",
+      "exitmenu": true
     }
   ]
 }

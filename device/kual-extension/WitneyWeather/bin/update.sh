@@ -29,6 +29,7 @@ target_path() {
     menu.json) echo "$APP/menu.json" ;;
     weather.sh) echo "$APP/bin/weather.sh" ;;
     weather-loop.sh) echo "$APP/bin/weather-loop.sh" ;;
+    wifi-diagnostic.sh) echo "$APP/bin/wifi-diagnostic.sh" ;;
     watchdog.sh) echo "$ROOT/kindle-weather-watchdog.sh" ;;
     *) return 1 ;;
   esac
@@ -74,7 +75,7 @@ fetch_file() {
 restore_backup() {
   [ -f "$JOURNAL" ] || return 0
   log 'Incomplete update found; restoring the previous app files'
-  for name in menu.json weather.sh weather-loop.sh watchdog.sh; do
+  for name in menu.json weather.sh weather-loop.sh wifi-diagnostic.sh watchdog.sh; do
     saved="$BACKUP/$name"
     destination=$(target_path "$name") || return 1
     if [ -f "$saved" ]; then
@@ -154,7 +155,7 @@ while IFS=' ' read -r field value extra || [ -n "${field:-}${value:-}${extra:-}"
   fi
   name=$value
   case "$name" in
-    menu.json|weather.sh|weather-loop.sh|watchdog.sh) ;;
+    menu.json|weather.sh|weather-loop.sh|wifi-diagnostic.sh|watchdog.sh) ;;
     *) fail 'manifest includes an unapproved file'; exit 1 ;;
   esac
   case "$seen" in *"|$name|"*) fail 'duplicate manifest file'; exit 1 ;; esac
@@ -172,8 +173,8 @@ while IFS=' ' read -r field value extra || [ -n "${field:-}${value:-}${extra:-}"
 done < "$manifest"
 
 [ -n "$version" ] || { fail 'manifest version is missing'; exit 1; }
-[ "$file_count" -eq 4 ] || { fail 'manifest does not contain the complete app file set'; exit 1; }
-for name in weather.sh weather-loop.sh watchdog.sh; do
+[ "$file_count" -eq 5 ] || { fail 'manifest does not contain the complete app file set'; exit 1; }
+for name in weather.sh weather-loop.sh wifi-diagnostic.sh watchdog.sh; do
   sh -n "$WORK/files/$name" || { fail "$name has invalid shell syntax"; exit 1; }
 done
 grep -q '"items"' "$WORK/files/menu.json" || { fail 'menu.json is malformed'; exit 1; }
@@ -186,7 +187,7 @@ if [ "$current" = "$version" ]; then
   exit 0
 fi
 
-for name in menu.json weather.sh weather-loop.sh watchdog.sh; do
+for name in menu.json weather.sh weather-loop.sh wifi-diagnostic.sh watchdog.sh; do
   destination=$(target_path "$name") || { fail 'internal file mapping error'; exit 1; }
   [ -f "$destination" ] || { fail "required installed file is missing: $name"; exit 1; }
   cp "$destination" "$WORK/backup-next/$name" || { fail "cannot back up $name"; exit 1; }
@@ -201,7 +202,7 @@ rm -rf "$BACKUP"
 mv "$WORK/backup-next" "$BACKUP" || { fail 'could not save rollback files'; exit 1; }
 : > "$JOURNAL" || { fail 'could not create the recovery marker'; exit 1; }
 
-for name in menu.json weather.sh weather-loop.sh watchdog.sh; do
+for name in menu.json weather.sh weather-loop.sh wifi-diagnostic.sh watchdog.sh; do
   destination=$(target_path "$name") || { restore_backup; fail 'internal file mapping error'; exit 1; }
   staged="$destination.weather-new"
   if ! cp "$WORK/files/$name" "$staged" || ! mv "$staged" "$destination"; then
