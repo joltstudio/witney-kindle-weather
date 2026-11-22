@@ -58,6 +58,9 @@ between updates, and uses the K4 RTC wake alarm plus suspend-to-RAM when availab
 The default weather checks run hourly from 05:05 through 23:05 in Kindle local
 time; daylight-saving changes follow the device clock. Wi-Fi gets 60 seconds
 to connect before each image request.
+After the one-time USB installation, KUAL > Witney Weather > Update Weather App
+over Wi-Fi fetches and verifies future app/config releases from GitHub Pages,
+backs up the installed files, and restarts the display. Wi-Fi must be available.
 
 Install sequence
 ----------------

@@ -12,29 +12,33 @@ mkdir -p \
   "$STAGE_DIR/kindle-weather"
 cp "$PROJECT_ROOT/device/kual-extension/WitneyWeather/bin/weather.sh" \
   "$STAGE_DIR/extensions/WitneyWeather/bin/weather.sh"
+cp "$PROJECT_ROOT/device/kual-extension/WitneyWeather/bin/update.sh" \
+  "$STAGE_DIR/extensions/WitneyWeather/bin/update.sh"
 cp "$PROJECT_ROOT/device/kual-extension/WitneyWeather/bin/weather-loop.sh" \
   "$STAGE_DIR/extensions/WitneyWeather/bin/weather-loop.sh"
+cp "$PROJECT_ROOT/device/kual-extension/WitneyWeather/menu.json" \
+  "$STAGE_DIR/extensions/WitneyWeather/menu.json"
 cp "$PROJECT_ROOT/device/kindle-weather-watchdog.sh" \
   "$STAGE_DIR/kindle-weather/kindle-weather-watchdog.sh"
-cp "$PROJECT_ROOT/device/kindle-weather-config.example" \
-  "$STAGE_DIR/kindle-weather/config"
 
 cat > "$STAGE_DIR/README-UPDATE.txt" <<'EOF'
 Witney Weather — low-power and boot-launch update
 =================================================
 
-This update contains the KUAL app scripts, weather config and existing cron
-watchdog target. It does not include firmware, jailbreak, MKK or keystore
-installers, and does not alter the root filesystem or crontab.
+This update contains the KUAL menu, Wi-Fi updater, weather app scripts and
+existing cron watchdog target. It does not include firmware, jailbreak,
+MKK or keystore installers and does not alter the root filesystem or crontab.
+
+This USB copy is a one-time updater bootstrap. Afterward, choose KUAL > Witney
+Weather > Update Weather App over Wi-Fi to fetch verified app files from
+GitHub Pages, keep a rollback copy, and restart the display.
 
 Before copying, confirm the once-per-minute root cron line already installed
 for /mnt/us/kindle-weather/kindle-weather-watchdog.sh is still present. Back
-up that watchdog, config and the two extension scripts from the Kindle user
+up that watchdog and the two extension scripts from the Kindle user
 volume. Copy the files in this archive to the matching paths on the Kindle
-volume. The included config restores the public image URL and sets
-WEATHER_REFRESH_TIMES=05:05,06:05,07:05,08:05,09:05,10:05,11:05,12:05,13:05,14:05,15:05,16:05,17:05,18:05,19:05,20:05,21:05,22:05,23:05
-and WEATHER_WIFI_SETTLE_SECONDS=60; it replaces the current config.
-Leave xh, CA bundle, cached weather image and KUAL menu in place.
+volume. Keep /mnt/us/kindle-weather/config unchanged; Wi-Fi app updates preserve
+this local configuration. Leave xh, CA bundle and cached weather image in place.
 
 The Wi-Fi client now gets 60 seconds to connect. Between failed downloads the
 app cycles Wi-Fi, waits for reconnection, and retries up to three times with
@@ -60,10 +64,11 @@ rm -f "$ZIP_PATH"
 (
   cd "$STAGE_DIR"
   zip -r -X "$ZIP_PATH" \
-    README-UPDATE.txt \
-    kindle-weather/config \
+  README-UPDATE.txt \
+  extensions/WitneyWeather/menu.json \
     extensions/WitneyWeather/bin/weather.sh \
     extensions/WitneyWeather/bin/weather-loop.sh \
+  extensions/WitneyWeather/bin/update.sh \
     kindle-weather/kindle-weather-watchdog.sh
 )
 unzip -t "$ZIP_PATH"

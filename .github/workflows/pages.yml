@@ -93,6 +93,7 @@ jobs:
           cp -R assets/fonts site/assets/
           cp outputs/witney-weather-live-600x800.png site/outputs/
           if [ -f outputs/weather-snapshot.json ]; then cp outputs/weather-snapshot.json site/outputs/; fi
+          node scripts/build-device-update.mjs site/device-update "$GITHUB_SHA"
       - uses: actions/upload-pages-artifact@v3
         if: steps.refresh.outputs.due == 'true'
         with:

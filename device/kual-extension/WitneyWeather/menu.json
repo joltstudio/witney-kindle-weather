@@ -18,6 +18,12 @@
       "params": "stop",
       "exitmenu": false,
       "refresh": true
+    },
+    {
+      "name": "Update Weather App over Wi-Fi",
+      "action": "./bin/update.sh",
+      "params": "update",
+      "exitmenu": true
     }
   ]
 }

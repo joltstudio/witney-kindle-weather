@@ -32,7 +32,13 @@ Build the user-volume-only low-power Kindle update bundle:
 sh scripts/build-kindle-power-update.sh
 ```
 
-It writes `outputs/witney-weather-low-power-update.zip`. The bundle contains the two KUAL app scripts, a config for five daily refreshes, and the existing root-cron watchdog target; it does not install firmware or alter the root filesystem. Confirm the existing cron entry and back up the replaced files before copying it to the Kindle over USB.
+It writes `outputs/witney-weather-low-power-update.zip`. The bundle contains the KUAL menu, Wi-Fi updater, weather scripts, and existing root-cron watchdog. Install it once over USB; after that, KUAL's `Update Weather App over Wi-Fi` action downloads and verifies future app files from GitHub Pages, keeps a rollback copy, and restarts the display. The updater preserves your local config. This changes user-volume files only; it does not install firmware or alter the root filesystem.
+
+## Updating the Kindle app over Wi-Fi
+
+The weather image already updates over Wi-Fi. Device code does not. The low-power update bundle now includes a KUAL updater bootstrap. Install the bundle once over USB, then select **Update Weather App over Wi-Fi** in KUAL for later app updates. The updater uses the existing HTTPS client and CA bundle, checks the downloaded files against a SHA-256 manifest, stages them before replacing the installed files, keeps a rollback copy, logs the outcome to `app.log`, preserves the device's local config, and restarts the display. It is manual; it does not silently install code in the background.
+
+The bootstrap itself and recovery still require USB. The Wi-Fi update route has not yet been verified on the physical Kindle; first-run verification must confirm the device has a SHA-256 utility and that a successful update appears in its log.
 
 ## Forecast and graph notes
 
