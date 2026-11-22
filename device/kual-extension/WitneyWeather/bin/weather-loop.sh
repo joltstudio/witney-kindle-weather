@@ -8,6 +8,7 @@ PIDFILE=/tmp/witney-weather.pid
 FETCHPIDFILE=/tmp/witney-weather-fetch.pid
 KEYWATCHPIDFILE=/tmp/witney-weather-home-key.pid
 KEYEVENTPIDFILE=/tmp/witney-weather-home-event.pid
+SLEEPPIDFILE=/tmp/witney-weather-wait.pid
 LIPC=/usr/bin/lipc-set-prop
 XH="$ROOT/xh"
 CA_BUNDLE="$ROOT/cacert.pem"
@@ -24,6 +25,23 @@ INTENTIONAL_EXIT=0
 EXIT_MARKER=/tmp/witney-weather-user-exit
 
 log() { echo "$(date '+%Y-%m-%d %H:%M:%S') $1" >> "$LOG"; }
+sleep_interruptibly() {
+  remaining=$1
+  case "$remaining" in ''|*[!0-9]*) return 1 ;; esac
+  [ "$remaining" -gt 0 ] || return 0
+  sleep "$remaining" &
+  sleep_pid=$!
+  echo "$sleep_pid" > "$SLEEPPIDFILE"
+  wait "$sleep_pid"
+  sleep_status=$?
+  if [ "$REFRESH_NOW" -eq 1 ]; then
+    kill "$sleep_pid" 2>/dev/null || true
+    wait "$sleep_pid" 2>/dev/null || true
+    sleep_status=0
+  fi
+  rm -f "$SLEEPPIDFILE"
+  return "$sleep_status"
+}
 cleanup() {
   # Make the watchdog's opt-out visible before doing any cleanup. This way a
   # delayed process exit cannot make the minute cron start a second display.
@@ -50,6 +68,14 @@ cleanup() {
       ;;
   esac
   rm -f "$KEYWATCHPIDFILE" "$KEYEVENTPIDFILE"
+  if [ -r "$SLEEPPIDFILE" ]; then
+    sleep_pid=$(cat "$SLEEPPIDFILE" 2>/dev/null)
+    case "$sleep_pid" in
+      ''|*[!0-9]*) ;;
+      *) kill "$sleep_pid" 2>/dev/null || true ;;
+    esac
+  fi
+  rm -f "$SLEEPPIDFILE"
   if [ -r "$FETCHPIDFILE" ]; then
     fetch_pid=$(cat "$FETCHPIDFILE" 2>/dev/null)
     case "$fetch_pid" in
@@ -173,7 +199,7 @@ else
   log 'Could not pause Kindle framework; continuing with status strip visible'
 fi
 start_home_key_watcher
-sleep 3
+  sleep_interruptibly 3
 
 display_cached_image() {
   if [ -s "$ROOT/weather.png" ]; then
@@ -219,7 +245,7 @@ fetch_and_display() {
           mv "$temp" "$ROOT/weather.png"
           log "Weather image fetched and displayed on attempt $attempt"
           # K4 can otherwise suspend before the e-ink waveform has finished.
-          sleep 5
+          sleep_interruptibly 5
           return 0
         fi
         rm -f "$temp"
@@ -234,14 +260,14 @@ fetch_and_display() {
       delay=$((RETRY_DELAY_SECONDS * attempt))
       log "Reconnecting Wi-Fi before retry $((attempt + 1))/$FETCH_ATTEMPTS"
       "$LIPC" com.lab126.wifid enable 0 2>/dev/null || true
-      sleep 3
+      sleep_interruptibly 3
       if ! "$LIPC" com.lab126.wifid enable 1 2>/dev/null; then
         log 'Wi-Fi reconnect request failed; continuing bounded retries'
       fi
       log "Waiting $WIFI_SETTLE_SECONDS seconds after Wi-Fi reconnect"
-      sleep "$WIFI_SETTLE_SECONDS"
+      sleep_interruptibly "$WIFI_SETTLE_SECONDS"
       log "Retrying weather download in $delay seconds"
-      sleep "$delay"
+      sleep_interruptibly "$delay"
     fi
     attempt=$((attempt + 1))
   done
@@ -312,7 +338,7 @@ sleep_until_refresh() {
   refresh_delay=$(calculate_refresh_delay "$local_clock" "$REFRESH_TIMES" "$local_calendar") || refresh_delay=
   case "$refresh_delay" in ''|*[!0-9]*|0)
     log 'Refresh schedule or Kindle local clock was invalid; using one-hour low-CPU fallback'
-    sleep 3600
+    sleep_interruptibly 3600
     return
     ;;
   esac
@@ -326,7 +352,7 @@ sleep_until_refresh() {
       ''|*[!0-9]*)
         delay=$refresh_delay
         log 'RTC clock unavailable; using low-CPU timer sleep'
-        sleep "$delay"
+        sleep_interruptibly "$delay"
         return
         ;;
     esac
@@ -334,7 +360,7 @@ sleep_until_refresh() {
     if ! echo "$wake_at" > "$rtc" 2>/dev/null; then
       log 'RTC alarm could not be set; using low-CPU timer sleep'
       delay=$refresh_delay
-      sleep "$delay"
+      sleep_interruptibly "$delay"
       return
     fi
     sync
@@ -343,7 +369,7 @@ sleep_until_refresh() {
       if ! echo mem > "$power_state" 2>> "$LOG"; then
         delay=$refresh_delay
         log "Suspend failed; falling back to low-CPU timer sleep for $delay seconds"
-        sleep "$delay"
+      sleep_interruptibly "$delay"
         return
       fi
       # A key can wake the Kindle early. Keep the image up, but do not spend
@@ -357,7 +383,7 @@ sleep_until_refresh() {
   fi
 
   log "RTC wake unavailable; using low-CPU timer sleep for $refresh_delay seconds"
-  sleep "$refresh_delay"
+  sleep_interruptibly "$refresh_delay"
 }
 
 refresh_weather() {
@@ -366,7 +392,7 @@ refresh_weather() {
     log 'Wi-Fi enable request failed; download retries will continue'
   fi
   log "Waiting $WIFI_SETTLE_SECONDS seconds for Wi-Fi connection"
-  sleep "$WIFI_SETTLE_SECONDS"
+  sleep_interruptibly "$WIFI_SETTLE_SECONDS"
   fetch_and_display
   "$LIPC" com.lab126.wifid enable 0 2>/dev/null || true
 }
