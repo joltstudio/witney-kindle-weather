@@ -7,6 +7,7 @@ LOG="$ROOT/app.log"
 PIDFILE=/tmp/witney-weather.pid
 FETCHPIDFILE=/tmp/witney-weather-fetch.pid
 KEYWATCHPIDFILE=/tmp/witney-weather-home-key.pid
+KEYEVENTPIDFILE=/tmp/witney-weather-home-event.pid
 LIPC=/usr/bin/lipc-set-prop
 XH="$ROOT/xh"
 CA_BUNDLE="$ROOT/cacert.pem"
@@ -24,11 +25,31 @@ EXIT_MARKER=/tmp/witney-weather-user-exit
 
 log() { echo "$(date '+%Y-%m-%d %H:%M:%S') $1" >> "$LOG"; }
 cleanup() {
-  if [ -r "$KEYWATCHPIDFILE" ]; then
-    key_pid=$(cat "$KEYWATCHPIDFILE" 2>/dev/null)
-    case "$key_pid" in ''|*[!0-9]*) ;; *) kill "$key_pid" 2>/dev/null || true ;; esac
+  # Make the watchdog's opt-out visible before doing any cleanup. This way a
+  # delayed process exit cannot make the minute cron start a second display.
+  if [ "$INTENTIONAL_EXIT" -eq 1 ]; then
+    : > "$EXIT_MARKER"
   fi
-  rm -f "$KEYWATCHPIDFILE"
+  if [ -r "$KEYWATCHPIDFILE" ]; then
+    watcher_pid=$(cat "$KEYWATCHPIDFILE" 2>/dev/null)
+  else
+    watcher_pid=
+  fi
+  if [ -r "$KEYEVENTPIDFILE" ]; then
+    key_event_pid=$(cat "$KEYEVENTPIDFILE" 2>/dev/null)
+    case "$key_event_pid" in
+      ''|*[!0-9]*) ;;
+      *) kill "$key_event_pid" 2>/dev/null || true ;;
+    esac
+  fi
+  case "$watcher_pid" in
+    ''|*[!0-9]*) ;;
+    *)
+      kill "$watcher_pid" 2>/dev/null || true
+      wait "$watcher_pid" 2>/dev/null || true
+      ;;
+  esac
+  rm -f "$KEYWATCHPIDFILE" "$KEYEVENTPIDFILE"
   if [ -r "$FETCHPIDFILE" ]; then
     fetch_pid=$(cat "$FETCHPIDFILE" 2>/dev/null)
     case "$fetch_pid" in
@@ -43,9 +64,6 @@ cleanup() {
   fi
   rm -f "$FETCHPIDFILE"
   rm -f "$PIDFILE"
-  if [ "$INTENTIONAL_EXIT" -eq 1 ]; then
-    : > "$EXIT_MARKER"
-  fi
   if [ "$CVM_STOPPED" -eq 1 ]; then
     killall -CONT cvm 2>/dev/null || true
     log 'Kindle framework resumed'
@@ -56,15 +74,33 @@ cleanup() {
   if [ "$HOME_EXIT" -eq 1 ]; then
     sleep 1
     if [ -w /proc/keypad ]; then
-      echo 'send 102' > /proc/keypad 2>/dev/null || true
-      log 'Home key forwarded to Kindle framework'
+      if echo 'send 102' > /proc/keypad 2>/dev/null; then
+        log 'Home key forwarded to Kindle framework'
+      else
+        log 'Could not forward Home key to Kindle framework'
+      fi
     else
       log 'Could not forward Home key to Kindle framework'
     fi
   fi
-  # Return wireless to the Kindle's normal state after the display exits.
-  "$LIPC" com.lab126.wifid enable 1 2>/dev/null || true
-  "$LIPC" com.lab126.powerd preventScreenSaver 0 2>/dev/null || true
+  # LIPC can stall when the network service is unhealthy. Restore Kindle
+  # services asynchronously so their response time can never hold up Home.
+  (
+    for property in 'com.lab126.wifid enable 1' 'com.lab126.powerd preventScreenSaver 0'; do
+      set -- $property
+      "$LIPC" "$1" "$2" "$3" >/dev/null 2>&1 &
+      restore_pid=$!
+      seconds=0
+      while kill -0 "$restore_pid" 2>/dev/null && [ "$seconds" -lt 5 ]; do
+        sleep 1
+        seconds=$((seconds + 1))
+      done
+      if kill -0 "$restore_pid" 2>/dev/null; then
+        kill "$restore_pid" 2>/dev/null || true
+      fi
+      wait "$restore_pid" 2>/dev/null || true
+    done
+  ) >/dev/null 2>&1 </dev/null &
 }
 trap 'INTENTIONAL_EXIT=1; exit 0' TERM INT
 
@@ -110,9 +146,18 @@ trap 'HOME_EXIT=1; INTENTIONAL_EXIT=1; log "Home key received; exiting weather d
 log 'Weather display opened'
 
 start_home_key_watcher() {
+  main_pid=$$
   (
-    /usr/bin/waitforkey 102 >/dev/null 2>&1
-    kill -USR2 "$$" 2>/dev/null || true
+    /usr/bin/waitforkey 102 >/dev/null 2>&1 &
+    key_event_pid=$!
+    echo "$key_event_pid" > "$KEYEVENTPIDFILE"
+    wait "$key_event_pid"
+    key_status=$?
+    rm -f "$KEYEVENTPIDFILE"
+    if [ "$key_status" -ne 0 ]; then
+      log "Home key listener exited with status $key_status"
+    fi
+    kill -USR2 "$main_pid" 2>/dev/null || true
   ) &
   echo "$!" > "$KEYWATCHPIDFILE"
   log 'Home exit is ready'
